@@ -807,7 +807,6 @@ if (weekPicker) {
 }
             loadRecords(); 
         }
-
         function parseLabelFromTitle(title) {
             const match = title.match(/^\[(.*?)\]/);
             return match ? match[1] : "その他";
@@ -1596,7 +1595,8 @@ if (weekPicker) {
         renderCategorySettings();
         loadRecords();
         updateDisplay();
-// 1. グラフ管理用変数（関数の外に置く）
+
+        // 1. グラフ管理用変数
 let myWeekChart = null;
 let myMonthChart = null;
 
@@ -1616,30 +1616,73 @@ function getWeekRangeLabel(weekValue) {
 // 3. 週間グラフを描画する関数
 function renderWeekChart(weekValue) {
     if (myWeekChart) myWeekChart.destroy();
-    const ctx = document.getElementById('chartContainerWeek').getContext('2d');
     
-    // ここで localStorage からデータを集計して data に入れる
+    const logs = JSON.parse(localStorage.getItem('poyu_global_logs') || '[]');
+    const [year, weekNum] = weekValue.split('-W');
+    
+    // その週の月曜日を計算
+    const monday = new Date(year, 0, (weekNum - 1) * 7 + 1);
+    monday.setDate(monday.getDate() - monday.getDay() + 1);
+
+    const weekData = new Array(7).fill(0);
+
+    logs.forEach(log => {
+        const logDate = new Date(log.date); 
+        const diffDays = Math.floor((logDate - monday) / (1000 * 60 * 60 * 24));
+        if (diffDays >= 0 && diffDays < 7) {
+            weekData[diffDays] += (log.totalSeconds || 0) / 60;
+        }
+    });
+    
+    const ctx = document.getElementById('chartContainerWeek').getContext('2d');
     myWeekChart = new Chart(ctx, {
         type: 'bar',
-        data: { /* 週間データの計算ロジックをここに書く */ },
-        options: { responsive: true, maintainAspectRatio: false }
+        data: {
+            labels: ['月', '火', '水', '木', '金', '土', '日'],
+            datasets: [{
+                label: '勉強時間(分)',
+                data: weekData,
+                backgroundColor: '#7bc0e3'
+            }]
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true } }
+        }
     });
 }
 
-// 4. 月間グラフを描画する関数（追加しました）
+// 4. 月間グラフを描画する関数
 function renderMonthChart(yearValue) {
     if (myMonthChart) myMonthChart.destroy();
-    const ctx = document.getElementById('chartContainerMonth').getContext('2d');
     
-    // ここで localStorage からデータを集計して data に入れる
+    const logs = JSON.parse(localStorage.getItem('poyu_global_logs') || '[]');
+    const monthData = new Array(12).fill(0);
+    
+    logs.forEach(log => {
+        const logDate = new Date(log.date);
+        if (logDate.getFullYear() == yearValue) {
+            monthData[logDate.getMonth()] += (log.totalSeconds || 0) / 60;
+        }
+    });
+
+    const ctx = document.getElementById('chartContainerMonth').getContext('2d');
     myMonthChart = new Chart(ctx, {
         type: 'bar',
-        data: { /* 月間データの計算ロジックをここに書く */ },
+        data: {
+            labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+            datasets: [{
+                label: '勉強時間(分)',
+                data: monthData,
+                backgroundColor: '#7bc0e3'
+            }]
+        },
         options: { responsive: true, maintainAspectRatio: false }
     });
 }
 
-// 5. イベントリスナー（ここだけを残す！）
+// 5. イベントリスナー
 document.getElementById('weekPicker').addEventListener('change', (e) => {
     document.getElementById('selectedDayTitleWeek').textContent = getWeekRangeLabel(e.target.value);
     renderWeekChart(e.target.value);
@@ -1647,6 +1690,27 @@ document.getElementById('weekPicker').addEventListener('change', (e) => {
 
 document.getElementById('yearSelect').addEventListener('change', (e) => {
     renderMonthChart(e.target.value);
+});
+
+// ページ読み込み時に、今日が含まれる週と現在の年でグラフを初期表示する
+window.addEventListener('DOMContentLoaded', () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    
+    // 今日の週番号を計算（ISO形式の週番号）
+    const firstDayOfYear = new Date(year, 0, 1);
+    const pastDaysOfYear = (now - firstDayOfYear) / 86400000;
+    const weekNum = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+    
+    // ピッカーに値をセット
+    const weekValue = `${year}-W${weekNum.toString().padStart(2, '0')}`;
+    document.getElementById('weekPicker').value = weekValue;
+    document.getElementById('yearSelect').value = year;
+    
+    // タイトルとグラフを表示
+    document.getElementById('selectedDayTitleWeek').textContent = getWeekRangeLabel(weekValue);
+    renderWeekChart(weekValue);
+    renderMonthChart(year);
 });
         
     </script>
