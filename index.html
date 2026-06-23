@@ -62,7 +62,6 @@
             justify-content: center;
             align-items: center;
             gap: 6px;
-            overflow: hidden; /* はみ出しをカットする */
             transition: all 0.2s;
         }
         #menuBtn:hover { background: #64b2da; transform: scale(1.05); }
@@ -73,11 +72,10 @@
             background-color: white;
             transition: 0.3s;
             border-radius: 2px;
-            transform-origin: center; /* 回転の中心をセンターに */
         }
-        #menuBtn.open .bar1 { transform: rotate(-45deg) translate(-6px, 6px); }
+        #menuBtn.open .bar1 { transform: rotate(-45deg) translate(-5.5px, 6px); }
         #menuBtn.open .bar2 { opacity: 0; }
-        #menuBtn.open .bar3 { transform: rotate(45deg) translate(-6px, -6px); }
+        #menuBtn.open .bar3 { transform: rotate(45deg) translate(-5.5px, -6px); }
 
 
 
