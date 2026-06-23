@@ -4,19 +4,35 @@
     <meta charset="UTF-8">
     <title>ぽゆたいまー</title>
     <style>
-        body { 
-            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif; 
-            background: #f4f9fc; 
-            color: #4a5568; 
-            padding-top: 60px; 
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            gap: 40px; 
-            margin: 0;
-            overflow-x: hidden;
-        }
+        /* スマホ版：ホーム画面をスッキリさせる設定 */
+@media screen and (max-width: 600px) {
+    #recordList, #totalStudyTime, #clearAllDataBtn { display: none; }
+    /* サイドバーの中身は表示させる */
+    #sidebar .menu-folder { display: block !important; }
+}
+       <body>
+    <!-- ① メイン画面（ここにはタイマーと最低限のボタンだけ残す） -->
+    <div id="timer">01:00</div>
+    <div id="status">最初の集中！</div>
+    <div id="controlArea">
+        <button id="startBtn">スタート</button>
+        <button id="resetBtn">リセット</button>
+    </div>
+    <div id="choiceArea" style="display:none;">
+        <button id="breakBtn">休憩</button>
+        <button id="continueBtn">継続</button>
+    </div>
 
+    <!-- ② サイドバー（ここに記録を隠す） -->
+    <div id="sidebar">
+        <div class="menu-folder">
+            <div class="menu-folder-header">今日の記録（タップで開く）</div>
+            <div id="recordList"></div>
+            <div>合計: <span id="totalStudyTime">0分00秒</span></div>
+            <button id="clearAllDataBtn">データ全消去</button>
+        </div>
+    </div>
+        
         /* 左上の3本線メニューボタン */
         #menuBtn {
             position: fixed;
