@@ -1586,23 +1586,19 @@ if (weekPicker) {
         loadRecords();
         updateDisplay();
 
-        // 1. グラフ管理用変数
+      // 1. グラフ管理用変数
 let myWeekChart = null;
 let myMonthChart = null;
 
-// 2. 週の日付範囲を計算する関数（修正版）
+// 2. 週の日付範囲を計算する関数
 function getWeekRangeLabel(weekValue) {
     const [year, week] = weekValue.split('-W');
-    // その年の1月1日を取得
     const firstDayOfYear = new Date(year, 0, 1);
-    
-    // その年の最初の月曜日を見つける
     const firstMonday = new Date(firstDayOfYear);
-    const day = firstDayOfYear.getDay(); // 0(日)〜6(土)
+    const day = firstDayOfYear.getDay();
     const diff = (day <= 1) ? (1 - day) : (8 - day);
     firstMonday.setDate(firstDayOfYear.getDate() + diff);
 
-    // 指定された週の月曜日（monday）と日曜日（sunday）を計算
     const monday = new Date(firstMonday);
     monday.setDate(firstMonday.getDate() + (week - 1) * 7);
     
@@ -1619,7 +1615,6 @@ function renderWeekChart(weekValue) {
     const logs = JSON.parse(localStorage.getItem('poyu_global_logs') || '[]');
     const [year, weekNum] = weekValue.split('-W');
     
-    // その週の月曜日を計算
     const monday = new Date(year, 0, (weekNum - 1) * 7 + 1);
     monday.setDate(monday.getDate() - monday.getDay() + 1);
 
@@ -1691,22 +1686,18 @@ document.getElementById('yearSelect').addEventListener('change', (e) => {
     renderMonthChart(e.target.value);
 });
 
-// ページ読み込み時に、今日が含まれる週と現在の年でグラフを初期表示する
+// 6. ページ読み込み時の初期化（1回だけにまとめました）
 window.addEventListener('DOMContentLoaded', () => {
     const now = new Date();
     const year = now.getFullYear();
-    
-    // 今日の週番号を計算（ISO形式の週番号）
     const firstDayOfYear = new Date(year, 0, 1);
     const pastDaysOfYear = (now - firstDayOfYear) / 86400000;
     const weekNum = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
     
-    // ピッカーに値をセット
     const weekValue = `${year}-W${weekNum.toString().padStart(2, '0')}`;
     document.getElementById('weekPicker').value = weekValue;
     document.getElementById('yearSelect').value = year;
     
-    // タイトルとグラフを表示
     document.getElementById('selectedDayTitleWeek').textContent = getWeekRangeLabel(weekValue);
     renderWeekChart(weekValue);
     renderMonthChart(year);
