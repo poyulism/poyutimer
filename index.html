@@ -25,6 +25,9 @@
     top: 0;
     left: -100%; /* これで画面外に隠れる */
     width: 100%; 
+    max-width: 100vw; /* 最大幅を画面幅に制限 */
+    overflow-x: hidden; /* 中身がはみ出したら隠す */
+    padding: 0 10px;    /* 左右に少し隙間を作る */
     height: 100%;
     background: #ffffff;
     z-index: 1000; /* 確実に一番手前に */
@@ -293,6 +296,9 @@
             background: #f8fafc;
             border-radius: 15px;
             border-bottom: 2px solid #e2e8f0;
+            width: 100%;
+    max-width: 100%;
+    overflow: hidden;
         }
         .chart-bar-wrapper {
             display: flex;
@@ -342,7 +348,11 @@
             margin: 0 0 10px 0;
             line-height: 1.4;
         }
-        .history-list { list-style: none; padding: 0; margin: 0; }
+        .history-list { list-style: none; padding: 0; margin: 0; 
+                      width: 100%;
+    max-width: 100%;
+    word-wrap: break-word; /* 長い単語は折り返す */
+    }
 
         /* 記録アイテムインプレース編集 */
         .edit-inline-box {
