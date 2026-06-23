@@ -1454,22 +1454,32 @@ let myWeekChart = null;
 let myMonthChart = null;
 
 // 2. 週の日付範囲を計算する関数
-function getWeekRangeLabel(weekValue) {
-    const [year, week] = weekValue.split('-W');
-    const firstDayOfYear = new Date(year, 0, 1);
-    const firstMonday = new Date(firstDayOfYear);
-    const day = firstDayOfYear.getDay();
-    const diff = (day <= 1) ? (1 - day) : (8 - day);
-    firstMonday.setDate(firstDayOfYear.getDate() + diff);
+function getWeekRangeLabel(weekStr) {
+    if (!weekStr) return "";
+    const parts = weekStr.split('-W');
+    if (parts.length !== 2) return "";
+    const year = parseInt(parts[0], 10);
+    const week = parseInt(parts[1], 10);
 
-    const monday = new Date(firstMonday);
-    monday.setDate(firstMonday.getDate() + (week - 1) * 7);
-    
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    
-    return `${monday.getMonth() + 1}/${monday.getDate()} ~ ${sunday.getMonth() + 1}/${sunday.getDate()}`;
+    // ISO 8601規格（週選択の基準）に基づいた正確な週初めの計算
+    // 「その年の1月4日」は必ず第1週（W01）に含まれるという規則を使用します
+    const jan4 = new Date(year, 0, 4);
+    const dayOfWeek = jan4.getDay(); // 0:日, 1:月, ..., 6:土
+    const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const firstMonday = new Date(year, 0, 4 - diffToMonday);
+
+    // 該当する週の月曜日と日曜日を計算
+    const targetMonday = new Date(firstMonday.getTime() + (week - 1) * 7 * 24 * 60 * 60 * 1000);
+    const targetSunday = new Date(targetMonday.getTime() + 6 * 24 * 60 * 60 * 1000);
+
+    const startM = targetMonday.getMonth() + 1;
+    const startD = targetMonday.getDate();
+    const endM = targetSunday.getMonth() + 1;
+    const endD = targetSunday.getDate();
+
+    return `${startM}/${startD}～${endM}/${endD}`;
 }
+        
 // 3. 週間グラフを描画する関数
 function renderWeekChart(weekValue) {
     if (myWeekChart) myWeekChart.destroy();
