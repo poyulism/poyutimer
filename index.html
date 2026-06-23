@@ -578,7 +578,6 @@ canvas {
         <div class="chart-container">
             <canvas id="chartContainerMonth" style="min-width: 600px; height: 160px;"></canvas>
         </div>
-                <div id="chartContainerMonth" class="chart-container"></div>
                 <div class="history-detail-area">
                     <h3 id="selectedDayTitleMonth">選択してください</h3>
                     <ul id="historyListMonth" class="history-list"></ul>
@@ -593,6 +592,9 @@ canvas {
                 <div class="total-area">
              合計勉強時間 <span id="totalStudyTime">0分00秒</span>
         </div>
+            <div style="margin-top: 30px; text-align: center; padding-bottom: 20px;">
+            <button id="clearAllDataBtn" style="background: #ef4444; color: white; font-size: 0.9rem; padding: 8px 16px; border-radius: 20px; box-shadow: none; margin: 0;">⚠️ 全データを初期化する</button>
+         </div>
     </div>
 </div>
     
@@ -1217,149 +1219,6 @@ if (weekPicker) {
             return li;
         }
 
-        function buildStackedBar(daySets, maxSeconds, wrapper) {
-            const barStack = document.createElement('div');
-            barStack.className = 'chart-bar-stack';
-
-            const totalSec = daySets.reduce((sum, item) => sum + item.rawSeconds, 0);
-            if (totalSec === 0) {
-                barStack.style.height = '2%';
-                wrapper.appendChild(barStack);
-                return;
-            }
-
-            const heightPercent = (totalSec / maxSeconds) * 85;
-            barStack.style.height = `${Math.max(heightPercent, 2)}%`;
-
-            const labelSecondsMap = {};
-            daySets.forEach(item => {
-                const lbl = parseLabelFromTitle(item.title);
-                labelSecondsMap[lbl] = (labelSecondsMap[lbl] || 0) + item.rawSeconds;
-            });
-
-            for (const lbl in labelSecondsMap) {
-                const segmentSec = labelSecondsMap[lbl];
-                const segmentPercent = (segmentSec / totalSec) * 100;
-
-                const segment = document.createElement('div');
-                segment.className = 'chart-bar-segment';
-                segment.style.height = `${segmentPercent}%`;
-                segment.style.backgroundColor = getLabelColor(lbl);
-                segment.title = `${lbl}: ${formatSecondsToText(segmentSec)}`;
-                barStack.appendChild(segment);
-            }
-
-            wrapper.appendChild(barStack);
-        }
-
-        function drawWeekChart() {
-            chartContainerWeek.innerHTML = '';
-            const logs = getGlobalLogs();
-            const baseDate = getTargetDateObject();
-            const dateList = [];
-
-            for (let i = 6; i >= 0; i--) {
-                const d = new Date(baseDate.getTime() - (i * 24 * 60 * 60 * 1000));
-                dateList.push(`${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`);
-            }
-
-            let maxSeconds = 1;
-            dateList.forEach(dateStr => {
-                const daySets = logs[dateStr] || [];
-                const totalSec = daySets.reduce((sum, item) => sum + item.rawSeconds, 0);
-                if (totalSec > maxSeconds) { maxSeconds = totalSec; }
-            });
-
-            dateList.forEach((dateStr) => {
-                const daySets = logs[dateStr] || [];
-                const wrapper = document.createElement('div');
-                wrapper.className = 'chart-bar-wrapper';
-                if (dateStr === getTargetDateStr()) { wrapper.classList.add('active'); }
-
-                buildStackedBar(daySets, maxSeconds, wrapper);
-
-                const label = document.createElement('div');
-                label.className = 'chart-label';
-                label.textContent = dateStr.substring(5); 
-
-                wrapper.appendChild(label);
-                
-                wrapper.addEventListener('click', () => {
-                    chartContainerWeek.querySelectorAll('.chart-bar-wrapper').forEach(w => w.classList.remove('active'));
-                    wrapper.classList.add('active');
-                    showDayDetail(dateStr);
-                });
-                chartContainerWeek.appendChild(wrapper);
-            });
-
-            const activeWrapper = chartContainerWeek.querySelector('.chart-bar-wrapper.active');
-            if (activeWrapper) {
-                const curLabelText = activeWrapper.querySelector('.chart-label').textContent;
-                const foundDate = dateList.find(d => d.endsWith(curLabelText));
-                showDayDetail(foundDate || getTargetDateStr());
-            } else {
-                showDayDetail(getTargetDateStr());
-            }
-        }
-
-        function drawMonthChart() {
-            chartContainerMonth.innerHTML = '';
-            const logs = getGlobalLogs();
-            const baseDate = getTargetDateObject();
-            const monthList = []; 
-
-            for (let i = 5; i >= 0; i--) {
-                const d = new Date(baseDate.getFullYear(), baseDate.getMonth() - i, 1);
-                const y = d.getFullYear(); const m = d.getMonth() + 1;
-                monthList.push({ year: y, month: m, label: `${m}月`, key: `${y}-${m.toString().padStart(2, '0')}` });
-            }
-
-            const monthlyDataSets = monthList.map(mInfo => {
-                let mergedSets = [];
-                for (const dateKey in logs) {
-                    if (dateKey.startsWith(mInfo.key)) {
-                        mergedSets = mergedSets.concat(logs[dateKey] || []);
-                    }
-                }
-                return mergedSets;
-            });
-
-            let maxMonthSeconds = 1;
-            monthlyDataSets.forEach(sets => {
-                const sec = sets.reduce((sum, item) => sum + item.rawSeconds, 0);
-                if (sec > maxMonthSeconds) maxMonthSeconds = sec;
-            });
-
-            const currentMonthKey = `${baseDate.getFullYear()}-${(baseDate.getMonth() + 1).toString().padStart(2, '0')}`;
-
-            monthList.forEach((mInfo, idx) => {
-                const daySets = monthlyDataSets[idx];
-                const wrapper = document.createElement('div');
-                wrapper.className = 'chart-bar-wrapper';
-                if (mInfo.key === currentMonthKey) { wrapper.classList.add('active'); }
-
-                buildStackedBar(daySets, maxMonthSeconds, wrapper);
-
-                const label = document.createElement('div');
-                label.className = 'chart-label';
-                label.textContent = mInfo.label;
-
-                wrapper.appendChild(label);
-
-                wrapper.addEventListener('click', () => {
-                    chartContainerMonth.querySelectorAll('.chart-bar-wrapper').forEach(w => w.classList.remove('active'));
-                    wrapper.classList.add('active');
-                    const currentTotal = daySets.reduce((sum, item) => sum + item.rawSeconds, 0);
-                    showMonthDetail(mInfo.key, mInfo.year, mInfo.month, currentTotal);
-                });
-                chartContainerMonth.appendChild(wrapper);
-            });
-
-            const curMIdx = monthList.findIndex(m => m.key === currentMonthKey);
-            const initialTotal = monthlyDataSets[curMIdx].reduce((sum, item) => sum + item.rawSeconds, 0);
-            showMonthDetail(currentMonthKey, baseDate.getFullYear(), baseDate.getMonth() + 1, initialTotal);
-        }
-
         function showDayDetail(dateStr) {
             const logs = getGlobalLogs();
             const daySets = logs[dateStr] || [];
@@ -1421,8 +1280,11 @@ if (weekPicker) {
             const todayTotal = todaySets.reduce((sum, item) => sum + item.rawSeconds, 0);
             totalStudyTimeDisplay.textContent = formatSecondsToText(todayTotal);
             
-            drawWeekChart();
-            drawMonthChart();
+            // 新しいChart.jsのグラフ関数を呼び出す（要素が存在するときだけ）
+            const wp = document.getElementById('weekPicker');
+            const ys = document.getElementById('yearSelect');
+            if (wp && wp.value) renderWeekChart(wp.value);
+            if (ys && ys.value) renderMonthChart(ys.value);
         }
 
         function updateDisplay() {
@@ -1683,31 +1545,61 @@ function renderMonthChart(yearValue) {
     });
 }
 
-// 5. イベントリスナー
-document.getElementById('weekPicker').addEventListener('change', (e) => {
-    document.getElementById('selectedDayTitleWeek').textContent = getWeekRangeLabel(e.target.value);
-    renderWeekChart(e.target.value);
-});
-
-document.getElementById('yearSelect').addEventListener('change', (e) => {
-    renderMonthChart(e.target.value);
-});
-
-// 6. ページ読み込み時の初期化（1回だけにまとめました）
+// 5 & 6. ページ読み込み時の初期化とイベントリスナー（安全に実行するために統合）
 window.addEventListener('DOMContentLoaded', () => {
     const now = new Date();
     const year = now.getFullYear();
+
+    // 1. 週間選択（weekPicker）のイベントリスナー登録
+    const weekPicker = document.getElementById('weekPicker');
+    if (weekPicker) {
+        weekPicker.addEventListener('change', (e) => {
+            const titleWeek = document.getElementById('selectedDayTitleWeek');
+            if (titleWeek) titleWeek.textContent = getWeekRangeLabel(e.target.value);
+            renderWeekChart(e.target.value);
+        });
+    } else {
+        console.warn("HTML内に id='weekPicker' が見つからないため、週間イベントをスキップしました。");
+    }
+
+    // 2. 月間選択（yearSelect）のイベントリスナー登録
+    const yearSelect = document.getElementById('yearSelect');
+    if (yearSelect) {
+        yearSelect.addEventListener('change', (e) => {
+            renderMonthChart(e.target.value);
+        });
+        
+        // 西暦の選択肢を自動生成する処理（すでに選択肢がある場合はスキップ）
+        if (yearSelect.options.length === 0) {
+            for (let i = year - 2; i <= year + 1; i++) {
+                let opt = document.createElement('option');
+                opt.value = i; opt.textContent = i + "年";
+                if (i === year) opt.selected = true;
+                yearSelect.appendChild(opt);
+            }
+        }
+    } else {
+        console.warn("HTML内に id='yearSelect' が見つからないため、月間イベントをスキップしました。");
+    }
+
+    // 3. 初期値の計算と初回グラフ描画
     const firstDayOfYear = new Date(year, 0, 1);
     const pastDaysOfYear = (now - firstDayOfYear) / 86400000;
     const weekNum = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
-    
     const weekValue = `${year}-W${weekNum.toString().padStart(2, '0')}`;
-    document.getElementById('weekPicker').value = weekValue;
-    document.getElementById('yearSelect').value = year;
     
-    document.getElementById('selectedDayTitleWeek').textContent = getWeekRangeLabel(weekValue);
-    renderWeekChart(weekValue);
-    renderMonthChart(year);
+    // 要素が存在する場合のみ初期値をセット
+    if (weekPicker) weekPicker.value = weekValue;
+    if (yearSelect) yearSelect.value = year;
+    
+    const titleWeek = document.getElementById('selectedDayTitleWeek');
+    if (titleWeek) titleWeek.textContent = getWeekRangeLabel(weekValue);
+    
+    // 画面全体の初期化を実行
+    statusDisplay.textContent = "最初の集中！";
+    renderCategorySettings();
+    loadRecords(); // この中で renderWeekChart と renderMonthChart も自動で走ります
+    updateDisplay();
 });
         
     </script>
