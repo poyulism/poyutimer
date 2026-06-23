@@ -456,6 +456,8 @@
 
         /* 今日の記録エリア（右側） */
         .record-area {
+      
+            
             width: 320px; background: #ffffff; border-radius: 20px; padding: 20px;
             box-shadow: 0 4px 15px rgba(123, 192, 227, 0.15); text-align: left;
             display: flex; flex-direction: column;
@@ -533,12 +535,14 @@
                     <ul id="historyListMonth" class="history-list"></ul>
                 </div>
             </div>
-        </div>
+         </div>
+
         <div class="record-area">
-        <h2>今日の記録</h2>
-        <ul id="recordList"></ul>
-        <div class="total-area">
-            合計勉強時間 <span id="totalStudyTime">0分00秒</span>
+    
+            <h2>今日の記録</h2>
+            <ul id="recordList"></ul>
+                <div class="total-area">
+             合計勉強時間 <span id="totalStudyTime">0分00秒</span>
         </div>
     </div>
     
@@ -623,12 +627,7 @@ menuBtn.addEventListener('click', () => {
     sidebar.classList.toggle('open');
     menuBtn.classList.toggle('open');
     });
-    // サイドバーを開いたときにグラフを再描画する処理（もしあれば）
-    if(sidebar.classList.contains('open')) {
-        if(typeof drawWeekChart === 'function') drawWeekChart();
-        if(typeof drawMonthChart === 'function') drawMonthChart();
-    }
-});
+    
         
         const chartContainerWeek = document.getElementById('chartContainerWeek');
         const selectedDayTitleWeek = document.getElementById('selectedDayTitleWeek');
