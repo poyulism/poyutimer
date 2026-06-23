@@ -321,7 +321,7 @@
                 <div class="select-layout">
                     <select id="finishLabelDropdown"></select>
                     <select id="finishTaskDropdown"></select>
-                    <input type="text" id="finishMemoInput" placeholder="ひと言メモ（やったこと）">
+                    <input type="text" id="finishMemoInput" placeholder="ひひとことメモ（やったこと）">
                     <button id="saveRecordBtn">記録を確定</button>
                 </div>
             </div>
@@ -329,6 +329,7 @@
     </div>
 
     <script>
+        // --- 1. サウンド再生ロジック ---
         function playBeep() {
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             function tone(delay) {
@@ -342,7 +343,7 @@
             tone(3.8); tone(3.95); tone(4.1); tone(4.4); tone(4.55); tone(4.7);
         }
 
-        // ★本番用の時間設定（バグの原因だった1分を25分に修正しました）
+        // --- 2. タイマー時間定義設定（25分に完全固定） ---
         const TIME_FIRST    = 25 * 60; // 最初の集中 (25分)
         const TIME_CHOOSING = 1 * 60;  // 自動移行カウントダウン (1分)
         const TIME_WORK25   = 25 * 60; // 本番の集中作業 (25分)
@@ -357,6 +358,7 @@
         let totalWork25Count = 0;            
         let hasContinuedInCurrentLoop = false; 
 
+        // DOM要素取得
         const timerDisplay = document.getElementById('timer');
         const statusDisplay = document.getElementById('status');
         const startBtn = document.getElementById('startBtn');
@@ -371,6 +373,7 @@
         const menuBtn = document.getElementById('menuBtn');
         const sidebar = document.getElementById('sidebar');
 
+        // サイドバー開閉管理
         menuBtn.addEventListener('click', () => {
             sidebar.classList.toggle('open');
             menuBtn.classList.toggle('open');
@@ -399,6 +402,7 @@
         const finishMemoInput = document.getElementById('finishMemoInput');
         const saveRecordBtn = document.getElementById('saveRecordBtn');
 
+        // カラーパレット定義
         const COLORS = [
             { hex: "#FF6B6B", name: "レッド" }, { hex: "#FF9F43", name: "オレンジ" },
             { hex: "#FFD93D", name: "イエロー" }, { hex: "#6BCB77", name: "グリーン" },
@@ -423,6 +427,7 @@
         }
         initColorPalette();
 
+        // 午前5時基準の日付管理ロジック
         function getTargetDateObject() {
             const now = new Date(); return new Date(now.getTime() - (5 * 60 * 60 * 1000));
         }
@@ -437,10 +442,12 @@
             return `${mins}分${secs.toString().padStart(2, '0')}秒`;
         }
 
+        // アコーディオンの制御
         document.querySelectorAll('.menu-folder-header').forEach(header => {
             header.addEventListener('click', () => { header.parentElement.classList.toggle('active'); });
         });
 
+        // --- 3. カテゴリ・タスク管理データ制御 ---
         function getCategoryData() {
             const data = localStorage.getItem('poyu_category_data');
             const defaultData = { labels: ["その他"], mapping: { "その他": ["なし"] }, colors: { "その他": "#AAB7B8" } };
@@ -578,7 +585,7 @@
                         e.stopPropagation();
                         if(!confirm(`ラベル「${lbl}」を削除しますか？\n(過去の記録は「その他」に自動変更されます)`)) return;
                         let d = getCategoryData(); d.labels = d.labels.filter(l => l !== lbl);
-                        delete d.mapping[lbl]; delete d.colors[lbl]; renameLabelInGlobalLogs(lbl, "その他"); saveCategoryData(d);
+                        delete d.mapping[lbl]; delete d.colors[lbl]; renameLabelInGlobalLogs(lbl, "other"); saveCategoryData(d);
                     });
                 } else {
                     viewRow.appendChild(normalView); viewRow.appendChild(btnSide); itemDiv.appendChild(viewRow);
@@ -635,6 +642,7 @@
             finishLabelDropdown.onchange();
         }
 
+        // --- 4. 履歴ログ・インライン編集の制御 ---
         function checkAndResetDailyRecords() {
             const currentTargetDate = getTargetDateStr(); const savedDate = localStorage.getItem('poyu_timer_date');
             if (savedDate !== currentTargetDate) {
@@ -658,7 +666,11 @@
             if (logs[dateStr] && logs[dateStr][index]) {
                 const formattedTask = (newTask === "なし" || !newTask) ? "" : ` ${newTask}`;
                 logs[dateStr][index].title = `[${newLabel}]${formattedTask}`;
-                localStorage.setItem('poyu_global_logs', JSON.stringify(logs)); loadRecords();
+                localStorage.setItem('poyu_global_logs', JSON.stringify(logs)); 
+                loadRecords();
+                // グラフも再描画してリアルタイムに連動
+                renderWeekChart(document.getElementById('weekPicker').value);
+                renderMonthChart(document.getElementById('yearSelect').value);
             }
         }
 
@@ -707,85 +719,6 @@
             return li;
         }
 
-        // ==========================================
-        // ★修正済：グラフ機能セクション
-        // ==========================================
-        let myWeekChart = null;
-        let myMonthChart = null;
-
-        function getWeekRangeLabel(weekValue) {
-            const [year, week] = weekValue.split('-W');
-            const firstDayOfYear = new Date(year, 0, 1); const firstMonday = new Date(firstDayOfYear);
-            const day = firstDayOfYear.getDay(); const diff = (day <= 1) ? (1 - day) : (8 - day);
-            firstMonday.setDate(firstDayOfYear.getDate() + diff);
-            const monday = new Date(firstMonday); monday.setDate(firstMonday.getDate() + (week - 1) * 7);
-            const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
-            return `${monday.getMonth() + 1}/${monday.getDate()} ~ ${sunday.getMonth() + 1}/${sunday.getDate()}`;
-        }
-
-        function renderWeekChart(weekValue) {
-            if (myWeekChart) myWeekChart.destroy();
-            const logs = getGlobalLogs(); // ★バグ修正：オブジェクトとして正しく読み込み
-            const [year, weekNum] = weekValue.split('-W');
-            const monday = new Date(year, 0, (weekNum - 1) * 7 + 1);
-            monday.setDate(monday.getDate() - monday.getDay() + 1);
-            const weekData = new Array(7).fill(0);
-
-            // ★バグ修正：エラーにならないようにオブジェクトをループ処理
-            Object.keys(logs).forEach(dateStr => {
-                const logDate = new Date(dateStr); 
-                const diffDays = Math.floor((logDate - monday) / (1000 * 60 * 60 * 24));
-                if (diffDays >= 0 && diffDays < 7) {
-                    const dayTotalSec = logs[dateStr].reduce((sum, item) => sum + item.rawSeconds, 0);
-                    weekData[diffDays] += dayTotalSec / 60;
-                }
-            });
-
-            const ctx = document.getElementById('chartContainerWeek').getContext('2d');
-            myWeekChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['月', '火', '水', '木', '金', '土', '日'],
-                    datasets: [{ label: '勉強時間(分)', data: weekData, backgroundColor: '#7bc0e3' }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-            });
-        }
-
-        function renderMonthChart(yearValue) {
-            if (myMonthChart) myMonthChart.destroy();
-            const logs = getGlobalLogs();
-            const monthData = new Array(12).fill(0);
-            
-            Object.keys(logs).forEach(dateStr => {
-                const logDate = new Date(dateStr);
-                if (logDate.getFullYear() == yearValue) {
-                    const dayTotalSec = logs[dateStr].reduce((sum, item) => sum + item.rawSeconds, 0);
-                    monthData[logDate.getMonth()] += dayTotalSec / 60;
-                }
-            });
-
-            const ctx = document.getElementById('chartContainerMonth').getContext('2d');
-            myMonthChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
-                    datasets: [{ label: '勉強時間(分)', data: monthData, backgroundColor: '#7bc0e3' }]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-        }
-
-        document.getElementById('weekPicker').addEventListener('change', (e) => {
-            document.getElementById('selectedDayTitleWeek').textContent = getWeekRangeLabel(e.target.value);
-            renderWeekChart(e.target.value);
-        });
-
-        document.getElementById('yearSelect').addEventListener('change', (e) => {
-            renderMonthChart(e.target.value);
-        });
-
-        // データ読み込み処理
         function loadRecords() {
             checkAndResetDailyRecords();
             const currentTargetDate = getTargetDateStr();
@@ -800,6 +733,166 @@
             totalStudyTimeDisplay.textContent = formatSecondsToText(todayTotal);
         }
 
+        // --- 5. ★バグ修正済：Chart.js週間・月間グラフ集計描画処理 ---
+        let myWeekChart = null;
+        let myMonthChart = null;
+
+        function getWeekRangeLabel(weekValue) {
+            if (!weekValue) return "選択してください";
+            const [year, week] = weekValue.split('-W');
+            const firstDayOfYear = new Date(year, 0, 1); const firstMonday = new Date(firstDayOfYear);
+            const day = firstDayOfYear.getDay(); const diff = (day <= 1) ? (1 - day) : (8 - day);
+            firstMonday.setDate(firstDayOfYear.getDate() + diff);
+            const monday = new Date(firstMonday); monday.setDate(firstMonday.getDate() + (week - 1) * 7);
+            const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+            return `${monday.getMonth() + 1}/${monday.getDate()} ~ ${sunday.getMonth() + 1}/${sunday.getDate()}`;
+        }
+
+        // 週間グラフ
+        function renderWeekChart(weekValue) {
+            if (!weekValue) return;
+            if (myWeekChart) myWeekChart.destroy();
+            
+            const logs = getGlobalLogs();
+            const [year, weekNum] = weekValue.split('-W');
+            
+            // 選択された週の月曜日を正確に割り出し
+            const firstDayOfYear = new Date(year, 0, 1);
+            const day = firstDayOfYear.getDay();
+            const diff = (day <= 1) ? (1 - day) : (8 - day);
+            const firstMonday = new Date(firstDayOfYear);
+            firstMonday.setDate(firstDayOfYear.getDate() + diff);
+            
+            const monday = new Date(firstMonday);
+            monday.setDate(firstMonday.getDate() + (weekNum - 1) * 7);
+            
+            const weekData = new Array(7).fill(0);
+            const weekDatesStr = [];
+            
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(monday);
+                d.setDate(monday.getDate() + i);
+                const dStr = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+                weekDatesStr.push(dStr);
+                
+                if (logs[dStr]) {
+                    const totalSec = logs[dStr].reduce((sum, item) => sum + item.rawSeconds, 0);
+                    weekData[i] = Math.round(totalSec / 60); // 分単位に変換
+                }
+            }
+
+            const ctx = document.getElementById('chartContainerWeek').getContext('2d');
+            myWeekChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['月', '火', '水', '木', '金', '土', '日'],
+                    datasets: [{ label: '勉強時間(分)', data: weekData, backgroundColor: '#7bc0e3' }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    scales: { y: { beginAtZero: true } },
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const idx = elements[0].index;
+                            const targetDate = weekDatesStr[idx];
+                            showDayDetails('Week', targetDate);
+                        }
+                    }
+                }
+            });
+        }
+
+        // 月間グラフ
+        function renderMonthChart(yearValue) {
+            if (!yearValue) return;
+            if (myMonthChart) myMonthChart.destroy();
+            
+            const logs = getGlobalLogs();
+            const monthData = new Array(12).fill(0);
+            
+            Object.keys(logs).forEach(dateStr => {
+                const logDate = new Date(dateStr);
+                if (logDate.getFullYear() == yearValue) {
+                    const totalSec = logs[dateStr].reduce((sum, item) => sum + item.rawSeconds, 0);
+                    monthData[logDate.getMonth()] += Math.round(totalSec / 60);
+                }
+            });
+
+            const ctx = document.getElementById('chartContainerMonth').getContext('2d');
+            myMonthChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+                    datasets: [{ label: '勉強時間(分)', data: monthData, backgroundColor: '#7bc0e3' }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const idx = elements[0].index;
+                            showMonthDetails(yearValue, idx);
+                        }
+                    }
+                }
+            });
+        }
+
+        // グラフタップ連動による詳細履歴表示
+        function showDayDetails(type, dateStr) {
+            const titleEl = document.getElementById(`selectedDayTitle${type}`);
+            const listEl = document.getElementById(`historyList${type}`);
+            listEl.innerHTML = '';
+            
+            const parts = dateStr.split('-');
+            titleEl.textContent = `${parts[1]}月${parts[2]}日の詳細`;
+            
+            const logs = getGlobalLogs();
+            const dayLogs = logs[dateStr] || [];
+            
+            if (dayLogs.length === 0) {
+                listEl.innerHTML = '<li>この日の記録はありません</li>';
+                return;
+            }
+            
+            dayLogs.forEach(item => {
+                const li = document.createElement('li');
+                li.style.padding = '4px 0';
+                li.innerHTML = `• <span style="font-weight:bold; color:#7bc0e3;">${item.title}</span> - ${item.time} ${item.memo ? `<span style="color:#64748b;">(${item.memo})</span>`:''}`;
+                listEl.appendChild(li);
+            });
+        }
+
+        function showMonthDetails(year, monthIdx) {
+            const titleEl = document.getElementById('selectedDayTitleMonth');
+            const listEl = document.getElementById('historyListMonth');
+            listEl.innerHTML = '';
+            titleEl.textContent = `${monthIdx + 1}月の合計詳細`;
+            
+            const logs = getGlobalLogs();
+            let matchCount = 0;
+            
+            Object.keys(logs).sort().forEach(dateStr => {
+                const d = new Date(dateStr);
+                if (d.getFullYear() == year && d.getMonth() == monthIdx) {
+                    logs[dateStr].forEach(item => {
+                        matchCount++;
+                        const li = document.createElement('li');
+                        li.style.padding = '4px 0';
+                        const p = dateStr.split('-');
+                        li.innerHTML = `[${p[1]}/${p[2]}] <b>${item.title}</b>: ${item.time} ${item.memo ? `(${item.memo})`:''}`;
+                        listEl.appendChild(li);
+                    });
+                }
+            });
+            
+            if (matchCount === 0) {
+                listEl.innerHTML = '<li>この月の記録はありません</li>';
+            }
+        }
+
+        // --- 6. タイマーコア制御ロジック ---
         function updateDisplay() {
             if (mode === 'work25' && timeLeft < 0) {
                 const overTime = Math.abs(timeLeft);
@@ -871,6 +964,7 @@
             startBtn.classList.remove('over-break'); startBtn.textContent = 'カウント中'; startBtn.disabled = true; updateDisplay();
         }
 
+        // ボタン群のイベントリスナー（★これで完全に紐づいて動きます）
         startBtn.addEventListener('click', () => {
             if (startBtn.classList.contains('over-break')) { goToBreak(); } else { if (timerId === null) { startTimer(); } }
         });
@@ -893,7 +987,7 @@
             saveToGlobalLogs(displayTitle, timeString, totalSeconds, memoValue);
             loadRecords();
             
-            // 保存後にグラフを即時再描画
+            // 保存後に即時グラフ再集計・更新
             renderWeekChart(document.getElementById('weekPicker').value);
             renderMonthChart(document.getElementById('yearSelect').value);
 
@@ -905,12 +999,21 @@
         breakBtn.addEventListener('click', goToBreak);
         continueBtn.addEventListener('click', goToContinue);
 
+        // 各種グラフピッカーの変更監視
+        document.getElementById('weekPicker').addEventListener('change', (e) => {
+            document.getElementById('selectedDayTitleWeek').textContent = getWeekRangeLabel(e.target.value);
+            renderWeekChart(e.target.value);
+        });
+
+        document.getElementById('yearSelect').addEventListener('change', (e) => {
+            renderMonthChart(e.target.value);
+        });
+
+        // --- 7. 画面初期化の完全統合（DOMロード時） ---
         window.addEventListener('DOMContentLoaded', () => {
-            // 初期化
             statusDisplay.textContent = "最初の集中！";
             renderCategorySettings();
             
-            // 年のセレクトボックス生成
             const now = new Date(); const year = now.getFullYear();
             const yearSelect = document.getElementById('yearSelect');
             if (yearSelect && yearSelect.options.length === 0) {
@@ -920,22 +1023,23 @@
                 }
             }
             
-            // 週番号計算
+            // 現在の週番号を正確に計算してインプットへ初期自動反映
             const firstDayOfYear = new Date(year, 0, 1);
             const pastDaysOfYear = (now - firstDayOfYear) / 86400000;
             const weekNum = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
             const weekValue = `${year}-W${weekNum.toString().padStart(2, '0')}`;
             
             document.getElementById('weekPicker').value = weekValue;
+            document.getElementById('yearSelect').value = year;
             
-            // タイトルと初期グラフ・レコード表示
             loadRecords(); 
             document.getElementById('selectedDayTitleWeek').textContent = getWeekRangeLabel(weekValue);
+            
+            // 初回グラフ描画実行
             renderWeekChart(weekValue);
             renderMonthChart(year);
             updateDisplay();
         });
-
     </script>
 </body>
 </html>
