@@ -2,37 +2,33 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ぽゆたいまー</title>
-    <style>
-        /* スマホ版：ホーム画面をスッキリさせる設定 */
-@media screen and (max-width: 600px) {
-    #recordList, #totalStudyTime, #clearAllDataBtn { display: none; }
-    /* サイドバーの中身は表示させる */
-    #sidebar .menu-folder { display: block !important; }
-}
-       <body>
-    <!-- ① メイン画面（ここにはタイマーと最低限のボタンだけ残す） -->
-    <div id="timer">01:00</div>
-    <div id="status">最初の集中！</div>
-    <div id="controlArea">
-        <button id="startBtn">スタート</button>
-        <button id="resetBtn">リセット</button>
-    </div>
-    <div id="choiceArea" style="display:none;">
-        <button id="breakBtn">休憩</button>
-        <button id="continueBtn">継続</button>
-    </div>
-
-    <!-- ② サイドバー（ここに記録を隠す） -->
-    <div id="sidebar">
-        <div class="menu-folder">
-            <div class="menu-folder-header">今日の記録（タップで開く）</div>
-            <div id="recordList"></div>
-            <div>合計: <span id="totalStudyTime">0分00秒</span></div>
-            <button id="clearAllDataBtn">データ全消去</button>
-        </div>
-    </div>
-        
+   
+        <style>
+    /* 画面いっぱいに表示するための土台 */
+    body {
+        margin: 0; padding: 0;
+        height: 100vh; width: 100vw;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        font-family: sans-serif;
+    }
+    #timer { font-size: 5rem; font-weight: bold; }
+    #status { font-size: 1.5rem; margin-bottom: 20px; }
+    
+    /* サイドバーの基本設定 */
+    #sidebar {
+        position: fixed; top: 0; left: -250px;
+        width: 250px; height: 100%; background: #f8f9fa;
+        transition: 0.3s; padding: 20px; overflow-y: auto;
+    }
+    #sidebar.open { left: 0; }
+    
+    /* 記録リストの表示切り替え */
+    .menu-folder { display: none; } /* 初期状態は非表示 */
+    #sidebar.open .menu-folder { display: block; } /* サイドバーが開いた時だけ表示 */
+            
         /* 左上の3本線メニューボタン */
         #menuBtn {
             position: fixed;
@@ -616,6 +612,10 @@
         
         const menuBtn = document.getElementById('menuBtn');
         const sidebar = document.getElementById('sidebar');
+        menuBtn.addEventListener('click', () => {
+    sidebar.classList.toggle('open');
+    menuBtn.classList.toggle('open');
+});
         
         const chartContainerWeek = document.getElementById('chartContainerWeek');
         const selectedDayTitleWeek = document.getElementById('selectedDayTitleWeek');
