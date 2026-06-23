@@ -1590,15 +1590,24 @@ if (weekPicker) {
 let myWeekChart = null;
 let myMonthChart = null;
 
-// 2. 週の日付範囲を計算する関数
+// 2. 週の日付範囲を計算する関数（修正版）
 function getWeekRangeLabel(weekValue) {
     const [year, week] = weekValue.split('-W');
+    // その年の1月1日を取得
     const firstDayOfYear = new Date(year, 0, 1);
-    const dayOffset = (1 - firstDayOfYear.getDay() + 7) % 7;
-    const firstMonday = new Date(firstDayOfYear.getTime() + (dayOffset * 86400000));
     
-    const monday = new Date(firstMonday.getTime() + ((week - 1) * 7 * 86400000));
-    const sunday = new Date(monday.getTime() + (6 * 86400000));
+    // その年の最初の月曜日を見つける
+    const firstMonday = new Date(firstDayOfYear);
+    const day = firstDayOfYear.getDay(); // 0(日)〜6(土)
+    const diff = (day <= 1) ? (1 - day) : (8 - day);
+    firstMonday.setDate(firstDayOfYear.getDate() + diff);
+
+    // 指定された週の月曜日（monday）と日曜日（sunday）を計算
+    const monday = new Date(firstMonday);
+    monday.setDate(firstMonday.getDate() + (week - 1) * 7);
+    
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
     
     return `${monday.getMonth() + 1}/${monday.getDate()} ~ ${sunday.getMonth() + 1}/${sunday.getDate()}`;
 }
