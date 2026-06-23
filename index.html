@@ -304,8 +304,14 @@
             padding-right: 20px;    /* 右端の見切れ防止用 */
             box-sizing: border-box;
     white-space: nowrap;    /* 中身を折り返さない */
+            padding-bottom: 10px;
             
         }
+            /* グラフがcanvasの場合はこれが必要です */
+canvas {
+    display: block;
+    max-width: none;
+}
             /* フィルター（セレクトボックス）の余白 */
 .filter-area {
     margin: 10px 0;
@@ -558,20 +564,19 @@
 
         <div class="menu-folder" id="folderWeek">
             <div class="menu-folder-header">📊 週間の勉強記録</div>
-            <div class="menu-folder-content">
-                <div class="filter-area">
+    <div class="menu-folder-content">
+        <div class="filter-area">
             <input type="week" id="weekPicker">
         </div>
         <div class="chart-container">
-            <div id="chartContainerWeek" style="min-width: 500px;"></div>
+            <canvas id="chartContainerWeek" style="min-width: 500px; height: 160px;"></canvas>
         </div>
-                <div id="chartContainerWeek" class="chart-container"></div>
-                <div class="history-detail-area">
-                    <h3 id="selectedDayTitleWeek">選択してください</h3>
-                    <ul id="historyListWeek" class="history-list"></ul>
-                </div>
-            </div>
+        <div class="history-detail-area">
+            <h3 id="selectedDayTitleWeek">選択してください</h3>
+            <ul id="historyListWeek" class="history-list"></ul>
         </div>
+    </div>
+</div>
 
         <div class="menu-folder" id="folderMonth">
             <div class="menu-folder-header">📆 月間の勉強記録</div>
@@ -580,7 +585,7 @@
             <select id="yearSelect"></select>
         </div>
         <div class="chart-container">
-            <div id="chartContainerMonth" style="min-width: 600px;"></div>
+            <canvas id="chartContainerMonth" style="min-width: 600px; height: 160px;"></canvas>
         </div>
                 <div id="chartContainerMonth" class="chart-container"></div>
                 <div class="history-detail-area">
@@ -1591,6 +1596,59 @@ if (weekPicker) {
         renderCategorySettings();
         loadRecords();
         updateDisplay();
+// 1. グラフ管理用変数（関数の外に置く）
+let myWeekChart = null;
+let myMonthChart = null;
+
+// 2. 週の日付範囲を計算する関数
+function getWeekRangeLabel(weekValue) {
+    const [year, week] = weekValue.split('-W');
+    const firstDayOfYear = new Date(year, 0, 1);
+    const dayOffset = (1 - firstDayOfYear.getDay() + 7) % 7;
+    const firstMonday = new Date(firstDayOfYear.getTime() + (dayOffset * 86400000));
+    
+    const monday = new Date(firstMonday.getTime() + ((week - 1) * 7 * 86400000));
+    const sunday = new Date(monday.getTime() + (6 * 86400000));
+    
+    return `${monday.getMonth() + 1}/${monday.getDate()} ~ ${sunday.getMonth() + 1}/${sunday.getDate()}`;
+}
+
+// 3. 週間グラフを描画する関数
+function renderWeekChart(weekValue) {
+    if (myWeekChart) myWeekChart.destroy();
+    const ctx = document.getElementById('chartContainerWeek').getContext('2d');
+    
+    // ここで localStorage からデータを集計して data に入れる
+    myWeekChart = new Chart(ctx, {
+        type: 'bar',
+        data: { /* 週間データの計算ロジックをここに書く */ },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+}
+
+// 4. 月間グラフを描画する関数（追加しました）
+function renderMonthChart(yearValue) {
+    if (myMonthChart) myMonthChart.destroy();
+    const ctx = document.getElementById('chartContainerMonth').getContext('2d');
+    
+    // ここで localStorage からデータを集計して data に入れる
+    myMonthChart = new Chart(ctx, {
+        type: 'bar',
+        data: { /* 月間データの計算ロジックをここに書く */ },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+}
+
+// 5. イベントリスナー（ここだけを残す！）
+document.getElementById('weekPicker').addEventListener('change', (e) => {
+    document.getElementById('selectedDayTitleWeek').textContent = getWeekRangeLabel(e.target.value);
+    renderWeekChart(e.target.value);
+});
+
+document.getElementById('yearSelect').addEventListener('change', (e) => {
+    renderMonthChart(e.target.value);
+});
+        
     </script>
 </body>
 </html>
