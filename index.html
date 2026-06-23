@@ -1,90 +1,204 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/poyulism/poyutimer/main/Gemini_Generated_Image_c9i37dc9i37dc9i3.png">
-    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/poyulism/poyutimer/main/Gemini_Generated_Image_c9i37dc9i37dc9i3.png">
+<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/poyulism/poyutimer/main/Gemini_Generated_Image_c9i37dc9i37dc9i3.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ぽゆたいまー</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        /* 画面いっぱいに表示するための土台 */
-        body {
-            margin: 0; padding: 0; height: 100vh; width: 100vw;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-family: sans-serif; overflow-x: hidden; position: relative;
-        }
-        #timer { font-size: 5rem; font-weight: bold; }
-        #status { font-size: 1.5rem; margin-bottom: 20px; }
-        
-        /* サイドバーの基本設定 */
-        #sidebar {
-            position: fixed; top: 0; left: -100%; width: 100%; max-width: 100vw;
-            overflow-x: hidden; padding: 0 10px; height: 100%; background: #ffffff;
-            z-index: 1000; transition: left 0.3s ease; padding: 80px 20px 20px 20px;
-            box-sizing: border-box; overflow-y: auto;
-        }
-        #sidebar.open { left: 0; }
-        .record-area { width: 100%; margin-top: 30px; background: #ffffff; box-shadow: none; }
-        .menu-folder { display: none; } 
-        #sidebar.open .menu-folder { display: block; } 
-                
+   
+        <style>
+    /* 画面いっぱいに表示するための土台 */
+    body {
+        margin: 0; padding: 0;
+        height: 100vh; width: 100vw;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        font-family: sans-serif;
+        overflow-x: hidden; /* 横方向のスクロールを物理的に禁止 */
+    position: relative; /* 基準をしっかりさせる */
+    }
+    #timer { font-size: 5rem; font-weight: bold; }
+    #status { font-size: 1.5rem; margin-bottom: 20px; }
+    
+    /* サイドバーの基本設定 */
+    #sidebar {
+       position: fixed;
+    top: 0;
+    left: -100%; /* これで画面外に隠れる */
+    width: 100%; 
+    max-width: 100vw; /* 最大幅を画面幅に制限 */
+    overflow-x: hidden; /* 中身がはみ出したら隠す */
+    padding: 0 10px;    /* 左右に少し隙間を作る */
+    height: 100%;
+    background: #ffffff;
+    z-index: 1000; /* 確実に一番手前に */
+    transition: left 0.3s ease;
+    padding: 80px 20px 20px 20px;
+    box-sizing: border-box;
+    overflow-y: auto;
+    }
+    #sidebar.open { left: 0; }
+            
+    .record-area {
+    width: 100%; 
+    margin-top: 30px;
+    background: #ffffff;
+    box-shadow: none; /* サイドバーの中に入るのでシャドウは不要 */
+}
+            
+    /* 記録リストの表示切り替え */
+    .menu-folder { display: none; } /* 初期状態は非表示 */
+    #sidebar.open .menu-folder { display: block; } /* サイドバーが開いた時だけ表示 */
+            
         /* 左上の3本線メニューボタン */
         #menuBtn {
-            position: fixed; top: 15px; left: 15px; width: 45px; height: 45px;
-            background: #7bc0e3; color: white; border-radius: 50%; cursor: pointer;
-            z-index: 2000; box-shadow: 0 4px 10px rgba(123,192,227,0.3);
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            gap: 6px; transition: all 0.2s;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            width: 45px;
+            height: 45px;
+            background: #7bc0e3;
+            color: white;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 2000;
+            box-shadow: 0 4px 10px rgba(123,192,227,0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
         }
         #menuBtn:hover { background: #64b2da; transform: scale(1.05); }
-        .bar { width: 22px; height: 3px; background-color: white; transition: 0.3s; border-radius: 2px; }
-        #menuBtn.open .bar1 { transform: rotate(-45deg) translate(-5.5px, 7px); }
-        #menuBtn.open .bar2 { opacity: 0; }
-        #menuBtn.open .bar3 { transform: rotate(45deg) translate(-5.5px, -7px); }
+        
+        .bar {
+            width: 22px;
+            height: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 2px;
+        }
+     /* メニューボタンが開いた時のスタイル */
+#menuBtn.open .bar1 { 
+    transform: rotate(-45deg) translate(-5.5px, 7px); /* 少しだけ外側にずらして隙間を埋める */
+}
+#menuBtn.open .bar2 { 
+    opacity: 0; /* ここで真ん中の線を消す */
+}
+#menuBtn.open .bar3 { 
+    transform: rotate(45deg) translate(-5.5px, -7px); /* 上記と対称にずらす */
+}
+
+    
+       
+    
 
         /* メニュー内の大見出し */
         .menu-folder {
-            background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;
-            margin-bottom: 12px; overflow: hidden; transition: all 0.2s ease;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            transition: all 0.2s ease;
         }
         .menu-folder-header {
-            padding: 15px; font-size: 1.1rem; font-weight: bold; color: #4a5568;
-            cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #4a5568;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
         }
-        .menu-folder-header:hover { background: #edf4f9; color: #7bc0e3; }
-        .menu-folder-header::after { content: '▶'; font-size: 0.8rem; color: #a0aec0; transition: transform 0.2s; }
-        .menu-folder.active .menu-folder-header::after { transform: rotate(90deg); color: #7bc0e3; }
-        .menu-folder-content { display: none; padding: 15px; background: #ffffff; border-top: 1px solid #edf2f7; }
+        .menu-folder-header:hover {
+            background: #edf4f9;
+            color: #7bc0e3;
+        }
+        .menu-folder-header::after {
+            content: '▶';
+            font-size: 0.8rem;
+            color: #a0aec0;
+            transition: transform 0.2s;
+        }
+        .menu-folder.active .menu-folder-header::after {
+            transform: rotate(90deg);
+            color: #7bc0e3;
+        }
+
+        .menu-folder-content {
+            display: none;
+            padding: 15px;
+            background: #ffffff;
+            border-top: 1px solid #edf2f7;
+        }
         .menu-folder.active .menu-folder-content { display: block; }
 
         /* 円形カラーパレット */
-        .color-palette { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+        .color-palette {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
         .color-circle {
-            width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
-            border: 2px solid transparent; transition: all 0.2s; box-shadow: inset 0 0 3px rgba(0,0,0,0.15);
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+            box-shadow: inset 0 0 3px rgba(0,0,0,0.15);
         }
         .color-circle:hover { transform: scale(1.1); }
         .color-circle.selected { border-color: #4a5568; transform: scale(1.15); box-shadow: 0 0 6px rgba(0,0,0,0.25); }
 
         /* 編集用の小さな円形パレット */
-        .edit-color-palette { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+        .edit-color-palette {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+            flex-wrap: wrap;
+        }
         .edit-color-circle {
-            width: 18px; height: 18px; border-radius: 50%; cursor: pointer;
-            border: 2px solid transparent; transition: all 0.1s;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.1s;
         }
         .edit-color-circle:hover { transform: scale(1.1); }
         .edit-color-circle.selected { border-color: #4a5568; transform: scale(1.15); }
 
         /* 管理エリアスタイル */
-        .manage-section { border-bottom: 1px dashed #e2e8f0; padding-bottom: 15px; margin-bottom: 15px; }
+        .manage-section {
+            border-bottom: 1px dashed #e2e8f0;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
         .manage-section:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
         .manage-section h4 { margin: 0 0 8px 0; font-size: 0.95rem; color: #64748b; }
         
-        .task-input-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+        .task-input-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
         .task-input-row input[type="text"], .task-input-row select {
-            padding: 8px 12px; border: 2px solid #e1e8ed; border-radius: 8px;
-            font-size: 0.95rem; outline: none; background: white; box-sizing: border-box;
+            padding: 8px 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            outline: none;
+            background: white;
+            box-sizing: border-box;
         }
         .task-input-row select { width: 100%; }
         .task-input-row input[type="text"] { flex: 1; }
@@ -92,8 +206,13 @@
 
         /* 出現するタスク入力グループのアニメーション設定 */
         #taskInputGroup {
-            display: none; gap: 8px; margin-top: 10px; background: #f0f7f4;
-            padding: 12px; border-radius: 10px; border: 1px dashed #57c7a3;
+            display: none;
+            gap: 8px;
+            margin-top: 10px;
+            background: #f0f7f4;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px dashed #57c7a3;
             animation: fadeInSlide 0.25s ease forwards;
         }
         @keyframes fadeInSlide {
@@ -102,8 +221,9 @@
         }
 
         .task-add-btn {
-            background: #7bc0e3; color: white; padding: 8px 16px; border-radius: 8px;
-            font-size: 0.9rem; cursor: pointer; font-weight: bold; margin: 0; box-shadow: none; border: none; white-space: nowrap;
+            background: #7bc0e3; color: white; padding: 8px 16px; 
+            border-radius: 8px; font-size: 0.9rem; cursor: pointer; font-weight: bold; margin: 0; box-shadow: none;
+            border: none; white-space: nowrap;
         }
         .task-add-btn:hover { background: #64b2da; }
         #addTaskBtn { background: #57c7a3; }
@@ -112,13 +232,35 @@
         /* 登録済みラベルリスト */
         .registered-tasks { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
         .label-manage-item {
-            display: flex; flex-direction: column; background: #ffffff; padding: 8px 12px;
-            border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); border: 1px solid #edf2f7;
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+            padding: 8px 12px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+            border: 1px solid #edf2f7;
         }
-        .label-view-row { display: flex; align-items: center; justify-content: space-between; width: 100%; }
-        .label-info-side { display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 0.95rem; }
-        .circle-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; box-shadow: inset 0 0 2px rgba(0,0,0,0.1); }
-        .label-btn-side { display: flex; gap: 10px; font-size: 0.85rem; }
+        .label-view-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+        .label-info-side {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+        .circle-dot {
+            width: 14px; height: 14px; border-radius: 50%; display: inline-block; box-shadow: inset 0 0 2px rgba(0,0,0,0.1);
+        }
+        .label-btn-side {
+            display: flex;
+            gap: 10px;
+            font-size: 0.85rem;
+        }
         .label-edit-btn { color: #7bc0e3; cursor: pointer; font-weight: bold; }
         .label-edit-btn:hover { color: #64b2da; }
         .task-delete { color: #ef4444; cursor: pointer; font-weight: bold; }
@@ -126,43 +268,159 @@
 
         /* ラベル編集インラインフォーム */
         .label-edit-box {
-            display: none; gap: 6px; background: #f1f5f9; padding: 8px;
-            border-radius: 8px; width: 100%; box-sizing: border-box; margin-top: 6px;
+            display: none;
+            gap: 6px;
+            background: #f1f5f9;
+            padding: 8px;
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: 6px;
         }
-        .label-edit-box input { padding: 4px 8px; font-size: 0.9rem; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; flex: 1; }
+        .label-edit-box input {
+            padding: 4px 8px;
+            font-size: 0.9rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            outline: none;
+            flex: 1;
+        }
+
         .nested-list { font-size: 0.9rem; color: #4a5568; margin-top: 15px; padding-left: 5px; }
         .nested-item { margin-bottom: 8px; }
 
         /* 棒グラフのコンテナ */
-        .chart-container { width: 100%; overflow-x: auto; white-space: nowrap; padding-bottom: 10px; box-sizing: border-box; }
-        canvas { display: block; max-width: none; }
-        .filter-area { margin: 10px 0; padding: 0 10px; }
-        
-        .history-detail-area { margin-top: 15px; padding: 10px; background: #f8fafc; border-radius: 10px; }
-        .history-detail-area h3 { font-size: 1rem; color: #4a5568; margin: 0 0 10px 0; line-height: 1.4; }
-        .history-list { list-style: none; padding: 0; margin: 0; width: 100%; max-width: 100%; word-wrap: break-word; }
+        .chart-container {
+            width: 100%;
+    overflow-x: auto;       /* 横スクロールを許可 */
+    white-space: nowrap;    /* 中身を折り返さない */
+    padding-bottom: 10px;
+    box-sizing: border-box;
+            
+        }
+            /* グラフがcanvasの場合はこれが必要です */
+canvas {
+    display: block;
+    max-width: none;
+}
+            /* フィルター（セレクトボックス）の余白 */
+.filter-area {
+    margin: 10px 0;
+    padding: 0 10px;
+}
+        .chart-bar-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            cursor: pointer;
+            height: 100%;
+            justify-content: flex-end;
+        }
+        .chart-bar-stack {
+            width: 60%;
+            max-width: 35px;
+            display: flex;
+            flex-direction: column-reverse; 
+            border-radius: 5px 5px 0 0;
+            overflow: hidden;
+            transition: all 0.2s ease;
+            min-height: 2px; 
+            background: #e2e8f0; 
+        }
+        .chart-bar-segment {
+            width: 100%;
+            transition: opacity 0.2s;
+        }
+        .chart-bar-wrapper:hover .chart-bar-segment, .chart-bar-wrapper.active .chart-bar-segment {
+            filter: brightness(0.9); 
+        }
+        .chart-label {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-top: 6px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        /* 詳細表示エリア */
+        .history-detail-area {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 10px;
+        }
+        .history-detail-area h3 {
+            font-size: 1rem;
+            color: #4a5568;
+            margin: 0 0 10px 0;
+            line-height: 1.4;
+        }
+        .history-list { list-style: none; padding: 0; margin: 0; 
+                      width: 100%;
+    max-width: 100%;
+    word-wrap: break-word; /* 長い単語は折り返す */
+    }
 
         /* 記録アイテムインプレース編集 */
-        .edit-inline-box { display: flex; gap: 4px; align-items: center; background: #edf4f9; padding: 4px; border-radius: 8px; width: 100%; margin-top: 4px; }
-        .edit-inline-box select { padding: 4px; font-size: 0.8rem; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; background: white; max-width: 100px; }
-        .edit-save-btn { background: #57c7a3; color: white; border: none; padding: 4px 8px; font-size: 0.8rem; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        .edit-cancel-btn { background: #94a3b8; color: white; border: none; padding: 4px 8px; font-size: 0.8rem; border-radius: 4px; cursor: pointer; }
+        .edit-inline-box {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            background: #edf4f9;
+            padding: 4px;
+            border-radius: 8px;
+            width: 100%;
+            margin-top: 4px;
+        }
+        .edit-inline-box select {
+            padding: 4px;
+            font-size: 0.8rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            outline: none;
+            background: white;
+            max-width: 100px;
+        }
+        .edit-save-btn {
+            background: #57c7a3; color: white; border: none; padding: 4px 8px;
+            font-size: 0.8rem; border-radius: 4px; cursor: pointer; font-weight: bold;
+        }
+        .edit-cancel-btn {
+            background: #94a3b8; color: white; border: none; padding: 4px 8px;
+            font-size: 0.8rem; border-radius: 4px; cursor: pointer;
+        }
 
         /* メインタイマーエリア */
         .main-area {
-            text-align: center; flex: 1; max-width: 500px; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; height: 100vh; padding: 0 20px; box-sizing: border-box;
+            text-align: center;
+            flex: 1;
+            max-width: 500px;
+            /* 追加・修正箇所 */
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* 縦方向の中央寄せ */
+    align-items: center;     /* 横方向の中央寄せ */
+    height: 100vh;           /* 画面全体の高さを確保 */
+    padding: 0 20px;
+    box-sizing: border-box;
         }
-        .main-area h1 { margin-top: 0; margin-bottom: 20px; }
+    /* タイトルの余白調整 */
+.main-area h1 {
+    margin-top: 0;
+    margin-bottom: 20px;
+}
         h1 { font-size: 2.5rem; color: #7bc0e3; margin-bottom: 10px; letter-spacing: 2px; }
         #status {
-            font-size: 1.2rem; font-weight: bold; background: #ffffff; padding: 8px 20px;
-            border-radius: 20px; display: inline-block; box-shadow: 0 4px 10px rgba(123, 192, 227, 0.15);
+            font-size: 1.2rem; font-weight: bold; background: #ffffff;
+            padding: 8px 20px; border-radius: 20px; display: inline-block;
+            box-shadow: 0 4px 10px rgba(123, 192, 227, 0.15);
         }
         #timer { font-size: 7rem; font-weight: bold; color: #7bc0e3; margin: 15px 0; font-variant-numeric: tabular-nums; }
         button { 
             font-size: 1.2rem; font-weight: bold; padding: 12px 30px; margin: 8px; 
-            cursor: pointer; border: none; border-radius: 25px; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            cursor: pointer; border: none; border-radius: 25px; transition: all 0.2s; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
         #startBtn { background: #7bc0e3; color: white; }
         #startBtn:hover:not(:disabled) { background: #64b2da; transform: translateY(-2px); }
@@ -181,36 +439,71 @@
         #continueBtn { background: #7bc0e3; color: white; }
         #continueBtn:hover { background: #64b2da; }
 
-        /* 終了時のタスク選択エリア（すりガラス背景モーダルウィンドウ化） */
+        /* ★改善：終了時のタスク選択エリア（すりガラス背景モーダルウィンドウ化） */
         #taskSelectArea {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0, 0, 0, 0.3); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-            z-index: 200; display: none; justify-content: center; align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.3); /* 暗度マスク */
+            backdrop-filter: blur(8px);    /* すりガラス効果 */
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 200; /* 最前面へ配置 */
+            display: none; /* JS側で中央寄せのために flex に切り替える */
+            justify-content: center;
+            align-items: center;
         }
         .modal-content {
-            background: #ffffff; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-            text-align: center; width: 90%; max-width: 400px; box-sizing: border-box; animation: modalSlideUp 0.3s ease-out;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+            box-sizing: border-box;
+            animation: modalSlideUp 0.3s ease-out;
         }
-        @keyframes modalSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes modalSlideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
         #taskSelectArea p { margin: 0 0 20px 0; font-size: 1.2rem; font-weight: bold; color: #4a5568; }
+        
+        /* モーダル内を縦配列に再設計 */
         .select-layout { display: flex; flex-direction: column; gap: 12px; width: 100%; }
         #taskSelectArea select, #taskSelectArea input[type="text"] { 
-            padding: 12px; font-size: 1rem; border: 2px solid #e1e8ed; border-radius: 10px; 
-            outline: none; background: white; box-sizing: border-box; width: 100%;
+            padding: 12px; 
+            font-size: 1rem; 
+            border: 2px solid #e1e8ed; 
+            border-radius: 10px; 
+            outline: none; 
+            background: white; 
+            box-sizing: border-box;
+            width: 100%;
         }
         #taskSelectArea select:focus, #taskSelectArea input[type="text"]:focus { border-color: #7bc0e3; }
         #saveRecordBtn { 
             background: #7bc0e3; color: white; font-size: 1.1rem; padding: 12px; 
-            border-radius: 10px; cursor: pointer; font-weight: bold; margin: 5px 0 0 0; border: none; width: 100%; box-shadow: 0 4px 6px rgba(123,192,227,0.2);
+            border-radius: 10px; cursor: pointer; font-weight: bold; margin: 5px 0 0 0; border: none; 
+            width: 100%;
+            box-shadow: 0 4px 6px rgba(123,192,227,0.2);
         }
         #saveRecordBtn:hover { background: #64b2da; transform: translateY(-1px); }
 
         /* 今日の記録エリア（右側） */
         .record-area {
+      
+            
             width: 320px; background: #ffffff; border-radius: 20px; padding: 20px;
-            box-shadow: 0 4px 15px rgba(123, 192, 227, 0.15); text-align: left; display: flex; flex-direction: column;
+            box-shadow: 0 4px 15px rgba(123, 192, 227, 0.15); text-align: left;
+            display: flex; flex-direction: column;
         }
-        .record-area h2 { font-size: 1.3rem; color: #7bc0e3; margin-top: 0; margin-bottom: 15px; border-bottom: 2px solid #f4f9fc; padding-bottom: 8px; }
+        .record-area h2 {
+            font-size: 1.3rem; color: #7bc0e3; margin-top: 0; margin-bottom: 15px;
+            border-bottom: 2px solid #f4f9fc; padding-bottom: 8px;
+        }
         #recordList { list-style: none; padding: 0; margin: 0; max-height: 280px; overflow-y: auto; }
         .record-item { padding: 8px 10px; border-bottom: 1px solid #f4f9fc; font-size: 0.95rem; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
         .record-item-row { width: 100%; display: flex; justify-content: space-between; align-items: center; }
@@ -234,6 +527,7 @@
         <div class="menu-folder" id="folderTask">
             <div class="menu-folder-header">🏷️ ラベル・タスク名の管理</div>
             <div class="menu-folder-content">
+                
                 <div class="manage-section">
                     <h4>① ラベル（大分類）と色を作る</h4>
                     <div id="labelColorPalette" class="color-palette"></div>
@@ -243,6 +537,7 @@
                     </div>
                     <div id="registeredLabels" class="registered-tasks"></div>
                 </div>
+
                 <div class="manage-section">
                     <h4>② ラベルの中にタスク名を入れる</h4>
                     <div class="task-input-row">
@@ -254,54 +549,59 @@
                     </div>
                     <div id="nestedStructure" class="nested-list"></div>
                 </div>
+
             </div>
         </div>
 
         <div class="menu-folder" id="folderWeek">
             <div class="menu-folder-header">📊 週間の勉強記録</div>
-            <div class="menu-folder-content">
-                <div class="filter-area">
-                    <input type="week" id="weekPicker">
-                </div>
-                <div class="chart-container">
-                    <canvas id="chartContainerWeek" style="min-width: 500px; height: 160px;"></canvas>
-                </div>
-                <div class="history-detail-area">
-                    <h3 id="selectedDayTitleWeek">選択してください</h3>
-                    <ul id="historyListWeek" class="history-list"></ul>
-                </div>
-            </div>
+    <div class="menu-folder-content">
+        <div class="filter-area">
+            <input type="week" id="weekPicker">
         </div>
+        <div class="chart-container">
+            <canvas id="chartContainerWeek" style="min-width: 500px; height: 160px;"></canvas>
+        </div>
+        <div class="history-detail-area">
+            <h3 id="selectedDayTitleWeek">選択してください</h3>
+            <ul id="historyListWeek" class="history-list"></ul>
+        </div>
+    </div>
+</div>
 
         <div class="menu-folder" id="folderMonth">
             <div class="menu-folder-header">📆 月間の勉強記録</div>
             <div class="menu-folder-content">
                 <div class="filter-area">
-                    <select id="yearSelect"></select>
-                </div>
-                <div class="chart-container">
-                    <canvas id="chartContainerMonth" style="min-width: 600px; height: 160px;"></canvas>
-                </div>
+            <select id="yearSelect"></select>
+        </div>
+        <div class="chart-container">
+            <canvas id="chartContainerMonth" style="min-width: 600px; height: 160px;"></canvas>
+        </div>
+                <div id="chartContainerMonth" class="chart-container"></div>
                 <div class="history-detail-area">
                     <h3 id="selectedDayTitleMonth">選択してください</h3>
                     <ul id="historyListMonth" class="history-list"></ul>
                 </div>
             </div>
-        </div>
+         </div>
 
         <div class="record-area">
+    
             <h2>今日の記録</h2>
             <ul id="recordList"></ul>
-            <div class="total-area">
-                合計勉強時間 <span id="totalStudyTime">0分00秒</span>
-            </div>
+                <div class="total-area">
+             合計勉強時間 <span id="totalStudyTime">0分00秒</span>
         </div>
     </div>
+</div>
+    
 
+    
     <div class="main-area">
         <h1>ぽゆたいまー</h1>
         <div id="status">最初の集中！</div>
-        <div id="timer">25:00</div>
+        <div id="timer">01:00</div>
         
         <div id="controlButtons">
             <button id="startBtn">スタート</button>
@@ -321,15 +621,15 @@
                 <div class="select-layout">
                     <select id="finishLabelDropdown"></select>
                     <select id="finishTaskDropdown"></select>
-                    <input type="text" id="finishMemoInput" placeholder="ひひとことメモ（やったこと）">
+                    <input type="text" id="finishMemoInput" placeholder="ひと言メモ（やったこと）">
                     <button id="saveRecordBtn">記録を確定</button>
                 </div>
             </div>
         </div>
     </div>
 
+
     <script>
-        // --- 1. サウンド再生ロジック ---
         function playBeep() {
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             function tone(delay) {
@@ -343,22 +643,21 @@
             tone(3.8); tone(3.95); tone(4.1); tone(4.4); tone(4.55); tone(4.7);
         }
 
-        // --- 2. タイマー時間定義設定（25分に完全固定） ---
-        const TIME_FIRST    = 25 * 60; // 最初の集中 (25分)
+        // ★本番用の時間設定（すべて秒数に換算）
+        const TIME_FIRST    = 1 * 60;  // 最初の集中 (1分)
         const TIME_CHOOSING = 1 * 60;  // 自動移行カウントダウン (1分)
         const TIME_WORK25   = 25 * 60; // 本番の集中作業 (25分)
         const TIME_BREAK    = 5 * 60;  // 休憩時間 (5分)
 
         let mode = 'first'; 
-        let timeLeft = TIME_FIRST; 
+        let timeLeft = TIME_FIRST; // 初期値は1分
         let timerId = null;
 
-        let totalElapsedBeforeContinue = 0;
+        let totalElapsedBeforeContinue = 0; 
         let totalOverTimeSeconds = 0;        
         let totalWork25Count = 0;            
         let hasContinuedInCurrentLoop = false; 
 
-        // DOM要素取得
         const timerDisplay = document.getElementById('timer');
         const statusDisplay = document.getElementById('status');
         const startBtn = document.getElementById('startBtn');
@@ -370,15 +669,16 @@
         const recordList = document.getElementById('recordList');
         const totalStudyTimeDisplay = document.getElementById('totalStudyTime');
         
-        const menuBtn = document.getElementById('menuBtn');
-        const sidebar = document.getElementById('sidebar');
+       // 既存のバラバラにある menuBtn の処理を削除し、以下のように1つだけ記述
+const menuBtn = document.getElementById('menuBtn');
+const sidebar = document.getElementById('sidebar');
 
-        // サイドバー開閉管理
-        menuBtn.addEventListener('click', () => {
-            sidebar.classList.toggle('open');
-            menuBtn.classList.toggle('open');
-        });
-
+menuBtn.addEventListener('click', () => {
+    sidebar.classList.toggle('open');
+    menuBtn.classList.toggle('open');
+    });
+    
+        
         const chartContainerWeek = document.getElementById('chartContainerWeek');
         const selectedDayTitleWeek = document.getElementById('selectedDayTitleWeek');
         const historyListWeek = document.getElementById('historyListWeek');
@@ -396,40 +696,52 @@
         const taskInput = document.getElementById('taskInput');
         const addTaskBtn = document.getElementById('addTaskBtn');
         const nestedStructure = document.getElementById('nestedStructure');
+        
         const taskSelectArea = document.getElementById('taskSelectArea');
         const finishLabelDropdown = document.getElementById('finishLabelDropdown');
         const finishTaskDropdown = document.getElementById('finishTaskDropdown');
         const finishMemoInput = document.getElementById('finishMemoInput');
         const saveRecordBtn = document.getElementById('saveRecordBtn');
+        
+        const clearAllDataBtn = document.getElementById('clearAllDataBtn');
 
-        // カラーパレット定義
         const COLORS = [
-            { hex: "#FF6B6B", name: "レッド" }, { hex: "#FF9F43", name: "オレンジ" },
-            { hex: "#FFD93D", name: "イエロー" }, { hex: "#6BCB77", name: "グリーン" },
-            { hex: "#4D96FF", name: "ブルー" }, { hex: "#9B5DE5", name: "パープル" },
-            { hex: "#F15BB5", name: "ピンク" }, { hex: "#00F5D4", name: "ミント" },
-            { hex: "#5DADE2", name: "スカイブルー" }, { hex: "#AAB7B8", name: "グレー" }
+            { hex: "#FF6B6B", name: "レッド" },
+            { hex: "#FF9F43", name: "オレンジ" },
+            { hex: "#FFD93D", name: "イエロー" },
+            { hex: "#6BCB77", name: "グリーン" },
+            { hex: "#4D96FF", name: "ブルー" },
+            { hex: "#9B5DE5", name: "パープル" },
+            { hex: "#F15BB5", name: "ピンク" },
+            { hex: "#00F5D4", name: "ミント" },
+            { hex: "#5DADE2", name: "スカイブルー" },
+            { hex: "#AAB7B8", name: "グレー" }
         ];
+
         let selectedColorHex = COLORS[0].hex;
 
         function initColorPalette() {
             labelColorPalette.innerHTML = '';
             COLORS.forEach((c, idx) => {
                 const circle = document.createElement('div');
-                circle.className = 'color-circle'; circle.style.backgroundColor = c.hex; circle.title = c.name;
+                circle.className = 'color-circle';
+                circle.style.backgroundColor = c.hex;
+                circle.title = c.name;
                 if (idx === 0) circle.classList.add('selected');
+
                 circle.addEventListener('click', () => {
                     labelColorPalette.querySelectorAll('.color-circle').forEach(el => el.classList.remove('selected'));
-                    circle.classList.add('selected'); selectedColorHex = c.hex;
+                    circle.classList.add('selected');
+                    selectedColorHex = c.hex;
                 });
                 labelColorPalette.appendChild(circle);
             });
         }
         initColorPalette();
 
-        // 午前5時基準の日付管理ロジック
         function getTargetDateObject() {
-            const now = new Date(); return new Date(now.getTime() - (5 * 60 * 60 * 1000));
+            const now = new Date();
+            return new Date(now.getTime() - (5 * 60 * 60 * 1000));
         }
 
         function getTargetDateStr() {
@@ -438,16 +750,18 @@
         }
 
         function formatSecondsToText(totalSec) {
-            const mins = Math.floor(totalSec / 60); const secs = totalSec % 60;
+            const mins = Math.floor(totalSec / 60);
+            const secs = totalSec % 60;
             return `${mins}分${secs.toString().padStart(2, '0')}秒`;
         }
 
-        // アコーディオンの制御
+
         document.querySelectorAll('.menu-folder-header').forEach(header => {
-            header.addEventListener('click', () => { header.parentElement.classList.toggle('active'); });
+            header.addEventListener('click', () => {
+                header.parentElement.classList.toggle('active');
+            });
         });
 
-        // --- 3. カテゴリ・タスク管理データ制御 ---
         function getCategoryData() {
             const data = localStorage.getItem('poyu_category_data');
             const defaultData = { labels: ["その他"], mapping: { "その他": ["なし"] }, colors: { "その他": "#AAB7B8" } };
@@ -460,15 +774,38 @@
         function saveCategoryData(data) {
             localStorage.setItem('poyu_category_data', JSON.stringify(data));
             renderCategorySettings();
-            loadRecords();
-        }
+            // 1. 西暦のセレクトボックスを生成
+const yearSelect = document.getElementById('yearSelect');
+if (yearSelect) {
+    const currentYear = new Date().getFullYear();
+    for (let i = currentYear - 2; i <= currentYear + 1; i++) {
+        let opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = i + "年";
+        if (i === currentYear) opt.selected = true; // 今年を初期選択
+        yearSelect.appendChild(opt);
+    }
+}
 
+// 2. 週選択の初期設定
+const weekPicker = document.getElementById('weekPicker');
+if (weekPicker) {
+    // 今日の日付から週の値をセット
+    const now = new Date();
+    const year = now.getFullYear();
+    const week = Math.ceil((((now - new Date(year, 0, 1)) / 86400000) + now.getDay() + 1) / 7);
+    weekPicker.value = `${year}-W${week.toString().padStart(2, '0')}`;
+}
+            loadRecords(); 
+        }
         function parseLabelFromTitle(title) {
-            const match = title.match(/^\[(.*?)\]/); return match ? match[1] : "その他";
+            const match = title.match(/^\[(.*?)\]/);
+            return match ? match[1] : "その他";
         }
 
         function getLabelColor(labelName) {
-            const data = getCategoryData(); return data.colors[labelName] || "#AAB7B8";
+            const data = getCategoryData();
+            return data.colors[labelName] || "#AAB7B8";
         }
 
         addLabelBtn.addEventListener('click', () => {
@@ -476,7 +813,9 @@
             if (!labelName || labelName === "その他") return;
             const data = getCategoryData();
             if (!data.labels.includes(labelName)) {
-                data.labels.push(labelName); data.mapping[labelName] = ["なし"]; data.colors[labelName] = selectedColorHex;
+                data.labels.push(labelName);
+                data.mapping[labelName] = ["なし"]; 
+                data.colors[labelName] = selectedColorHex;
                 saveCategoryData(data);
             }
             labelInput.value = '';
@@ -484,178 +823,288 @@
 
         labelSelectRow.addEventListener('change', () => {
             if (labelSelectRow.value !== "") {
-                taskInputGroup.style.display = 'flex'; taskInput.focus();
-            } else { taskInputGroup.style.display = 'none'; }
+                taskInputGroup.style.display = 'flex';
+                taskInput.focus();
+            } else {
+                taskInputGroup.style.display = 'none';
+            }
         });
 
         addTaskBtn.addEventListener('click', () => {
-            const selectedLabel = labelSelectRow.value; const taskName = taskInput.value.trim();
+            const selectedLabel = labelSelectRow.value;
+            const taskName = taskInput.value.trim();
             if (!selectedLabel || !taskName) return;
+            
             const data = getCategoryData();
             if (!data.mapping[selectedLabel]) { data.mapping[selectedLabel] = []; }
+            
             if (data.mapping[selectedLabel].includes("なし")) {
                 data.mapping[selectedLabel] = data.mapping[selectedLabel].filter(t => t !== "なし");
             }
+            
             if (!data.mapping[selectedLabel].includes(taskName)) {
-                data.mapping[selectedLabel].push(taskName); saveCategoryData(data);
+                data.mapping[selectedLabel].push(taskName);
+                saveCategoryData(data);
             }
-            taskInput.value = ''; taskInput.focus(); 
+            taskInput.value = '';
+            taskInput.focus(); 
         });
 
         function renameLabelInGlobalLogs(oldLabel, newLabel) {
-            const logs = getGlobalLogs(); let changed = false;
+            const logs = getGlobalLogs();
+            let changed = false;
             for (const dateKey in logs) {
                 logs[dateKey].forEach(item => {
                     const currentLabel = parseLabelFromTitle(item.title);
                     if (currentLabel === oldLabel) {
                         const taskPart = item.title.replace(/^\[.*?\]/, '');
-                        item.title = `[${newLabel}]${taskPart}`; changed = true;
+                        item.title = `[${newLabel}]${taskPart}`;
+                        changed = true;
                     }
                 });
             }
-            if (changed) { localStorage.setItem('poyu_global_logs', JSON.stringify(logs)); }
+            if (changed) {
+                localStorage.setItem('poyu_global_logs', JSON.stringify(logs));
+            }
         }
 
         function renderCategorySettings() {
             const data = getCategoryData();
             registeredLabels.innerHTML = '';
+            
             const currentSavedRowLabel = labelSelectRow.value;
             labelSelectRow.innerHTML = '';
             const placeholderOpt = document.createElement('option');
-            placeholderOpt.value = ""; placeholderOpt.textContent = "-- ラベルを選択してください --";
+            placeholderOpt.value = "";
+            placeholderOpt.textContent = "-- ラベルを選択してください --";
             labelSelectRow.appendChild(placeholderOpt);
             
             data.labels.forEach(lbl => {
-                const itemDiv = document.createElement('div'); itemDiv.className = 'label-manage-item';
-                const viewRow = document.createElement('div'); viewRow.className = 'label-view-row';
-                const normalView = document.createElement('div'); normalView.className = 'label-info-side';
-                
-                const dot = document.createElement('span'); dot.className = 'circle-dot'; dot.style.backgroundColor = getLabelColor(lbl);
-                const txt = document.createElement('span'); txt.textContent = lbl;
-                normalView.appendChild(dot); normalView.appendChild(txt);
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'label-manage-item';
 
-                const btnSide = document.createElement('div'); btnSide.className = 'label-btn-side';
+                const viewRow = document.createElement('div');
+                viewRow.className = 'label-view-row';
+
+                const normalView = document.createElement('div');
+                normalView.className = 'label-info-side';
+                
+                const dot = document.createElement('span');
+                dot.className = 'circle-dot';
+                dot.style.backgroundColor = getLabelColor(lbl);
+                
+                const txt = document.createElement('span');
+                txt.textContent = lbl;
+                
+                normalView.appendChild(dot);
+                normalView.appendChild(txt);
+
+                const btnSide = document.createElement('div');
+                btnSide.className = 'label-btn-side';
 
                 if (lbl !== "その他") {
-                    const editBtn = document.createElement('span'); editBtn.className = 'label-edit-btn'; editBtn.textContent = '編集';
-                    const delBtn = document.createElement('span'); delBtn.className = 'task-delete'; delBtn.textContent = '×';
-                    btnSide.appendChild(editBtn); btnSide.appendChild(delBtn);
+                    const editBtn = document.createElement('span');
+                    editBtn.className = 'label-edit-btn';
+                    editBtn.textContent = '編集';
+                    
+                    const delBtn = document.createElement('span');
+                    delBtn.className = 'task-delete';
+                    delBtn.textContent = '×';
 
-                    const editForm = document.createElement('div'); editForm.className = 'label-edit-box'; editForm.style.flexDirection = 'column';
-                    const inputRow = document.createElement('div'); inputRow.style.display = 'flex'; inputRow.style.gap = '6px'; inputRow.style.width = '100%';
-                    const nameInp = document.createElement('input'); nameInp.type = 'text'; nameInp.value = lbl;
-                    const saveBtn = document.createElement('button'); saveBtn.className = 'edit-save-btn'; saveBtn.textContent = '保存';
-                    const cancelBtn = document.createElement('button'); cancelBtn.className = 'edit-cancel-btn'; cancelBtn.textContent = '×';
+                    btnSide.appendChild(editBtn);
+                    btnSide.appendChild(delBtn);
 
-                    inputRow.appendChild(nameInp); inputRow.appendChild(saveBtn); inputRow.appendChild(cancelBtn);
-                    const editPalette = document.createElement('div'); editPalette.className = 'edit-color-palette';
+                    const editForm = document.createElement('div');
+                    editForm.className = 'label-edit-box';
+                    editForm.style.flexDirection = 'column';
+
+                    const inputRow = document.createElement('div');
+                    inputRow.style.display = 'flex';
+                    inputRow.style.gap = '6px';
+                    inputRow.style.width = '100%';
+
+                    const nameInp = document.createElement('input');
+                    nameInp.type = 'text';
+                    nameInp.value = lbl;
+
+                    const saveBtn = document.createElement('button');
+                    saveBtn.className = 'edit-save-btn'; saveBtn.textContent = '保存';
+                    const cancelBtn = document.createElement('button');
+                    cancelBtn.className = 'edit-cancel-btn'; cancelBtn.textContent = '×';
+
+                    inputRow.appendChild(nameInp);
+                    inputRow.appendChild(saveBtn);
+                    inputRow.appendChild(cancelBtn);
+
+                    const editPalette = document.createElement('div');
+                    editPalette.className = 'edit-color-palette';
+
                     let currentEditColor = getLabelColor(lbl);
-
                     COLORS.forEach(c => {
-                        const cCircle = document.createElement('div'); cCircle.className = 'edit-color-circle'; cCircle.style.backgroundColor = c.hex;
+                        const cCircle = document.createElement('div');
+                        cCircle.className = 'edit-color-circle';
+                        cCircle.style.backgroundColor = c.hex;
                         if (c.hex === currentEditColor) cCircle.classList.add('selected');
+                        
                         cCircle.addEventListener('click', () => {
                             editPalette.querySelectorAll('.edit-color-circle').forEach(el => el.classList.remove('selected'));
-                            cCircle.classList.add('selected'); currentEditColor = c.hex;
+                            cCircle.classList.add('selected');
+                            currentEditColor = c.hex;
                         });
                         editPalette.appendChild(cCircle);
                     });
 
-                    editForm.appendChild(inputRow); editForm.appendChild(editPalette);
-                    viewRow.appendChild(normalView); viewRow.appendChild(btnSide);
-                    itemDiv.appendChild(viewRow); itemDiv.appendChild(editForm);
+                    editForm.appendChild(inputRow);
+                    editForm.appendChild(editPalette);
+
+                    viewRow.appendChild(normalView);
+                    viewRow.appendChild(btnSide);
+                    itemDiv.appendChild(viewRow);
+                    itemDiv.appendChild(editForm);
 
                     editBtn.addEventListener('click', () => {
                         const isNone = editForm.style.display === 'none' || editForm.style.display === '';
                         editForm.style.display = isNone ? 'flex' : 'none';
                     });
+
                     saveBtn.addEventListener('click', () => {
-                        const newName = nameInp.value.trim(); if (!newName) return;
+                        const newName = nameInp.value.trim();
+                        if (!newName) return;
+                        
                         let d = getCategoryData();
                         if (newName !== lbl) {
-                            if (d.labels.includes(newName)) { alert('そのラベル名は既に存在します'); return; }
+                            if (d.labels.includes(newName)) {
+                                alert('そのラベル名は既に存在します');
+                                return;
+                            }
                             d.labels = d.labels.map(l => l === lbl ? newName : l);
-                            d.mapping[newName] = d.mapping[lbl] || ["なし"]; delete d.mapping[lbl];
+                            d.mapping[newName] = d.mapping[lbl] || ["なし"];
+                            delete d.mapping[lbl];
                             renameLabelInGlobalLogs(lbl, newName);
                         }
-                        delete d.colors[lbl]; d.colors[newName] = currentEditColor; saveCategoryData(d);
+                        
+                        delete d.colors[lbl];
+                        d.colors[newName] = currentEditColor;
+                        saveCategoryData(d);
                     });
-                    cancelBtn.addEventListener('click', () => { editForm.style.display = 'none'; nameInp.value = lbl; });
+
+                    cancelBtn.addEventListener('click', () => {
+                        editForm.style.display = 'none';
+                        nameInp.value = lbl;
+                    });
+
                     delBtn.addEventListener('click', (e) => {
                         e.stopPropagation();
                         if(!confirm(`ラベル「${lbl}」を削除しますか？\n(過去の記録は「その他」に自動変更されます)`)) return;
-                        let d = getCategoryData(); d.labels = d.labels.filter(l => l !== lbl);
-                        delete d.mapping[lbl]; delete d.colors[lbl]; renameLabelInGlobalLogs(lbl, "other"); saveCategoryData(d);
+                        let d = getCategoryData();
+                        d.labels = d.labels.filter(l => l !== lbl);
+                        delete d.mapping[lbl];
+                        delete d.colors[lbl];
+                        renameLabelInGlobalLogs(lbl, "その他");
+                        saveCategoryData(d);
                     });
                 } else {
-                    viewRow.appendChild(normalView); viewRow.appendChild(btnSide); itemDiv.appendChild(viewRow);
+                    viewRow.appendChild(normalView);
+                    viewRow.appendChild(btnSide);
+                    itemDiv.appendChild(viewRow);
                 }
 
                 registeredLabels.appendChild(itemDiv);
-                const opt = document.createElement('option'); opt.value = lbl; opt.textContent = lbl; labelSelectRow.appendChild(opt);
+
+                const opt = document.createElement('option');
+                opt.value = lbl; opt.textContent = lbl;
+                labelSelectRow.appendChild(opt);
             });
 
             if (currentSavedRowLabel && data.labels.includes(currentSavedRowLabel)) {
-                labelSelectRow.value = currentSavedRowLabel; taskInputGroup.style.display = 'flex';
+                labelSelectRow.value = currentSavedRowLabel;
+                taskInputGroup.style.display = 'flex';
             }
 
             nestedStructure.innerHTML = '';
             for (const lbl in data.mapping) {
-                const block = document.createElement('div'); block.className = 'nested-item';
+                const block = document.createElement('div');
+                block.className = 'nested-item';
                 block.innerHTML = `<strong style="color:${getLabelColor(lbl)};">■ ${lbl}</strong>`;
-                const ul = document.createElement('div'); ul.style.paddingLeft = "15px"; ul.style.marginBottom = "4px";
+                
+                const ul = document.createElement('div');
+                ul.style.paddingLeft = "15px";
+                ul.style.marginBottom = "4px";
+                
                 data.mapping[lbl].forEach(tsk => {
-                    const tskSpan = document.createElement('div'); tskSpan.style.display = 'flex'; tskSpan.style.justifyContent = 'space-between';
-                    tskSpan.style.maxWidth = '250px'; tskSpan.style.fontSize = '0.85rem'; tskSpan.style.padding = '2px 0';
+                    const tskSpan = document.createElement('div');
+                    tskSpan.style.display = 'flex';
+                    tskSpan.style.justifyContent = 'space-between';
+                    tskSpan.style.maxWidth = '250px';
+                    tskSpan.style.fontSize = '0.85rem';
+                    tskSpan.style.padding = '2px 0';
+                    
                     if (tsk === "なし") {
                         tskSpan.innerHTML = `<span style="color:#a0aec0;">(タスク未登録)</span>`;
                     } else {
                         tskSpan.innerHTML = `<span>・ ${tsk}</span>`;
-                        const delT = document.createElement('span'); delT.className = 'task-delete'; delT.textContent = '消去';
+                        const delT = document.createElement('span');
+                        delT.className = 'task-delete'; delT.textContent = '消去';
                         delT.addEventListener('click', () => {
-                            let d = getCategoryData(); d.mapping[lbl] = d.mapping[lbl].filter(t => t !== tsk);
-                            if (d.mapping[lbl].length === 0) { d.mapping[lbl].push("なし"); } saveCategoryData(d);
+                            let d = getCategoryData();
+                            d.mapping[lbl] = d.mapping[lbl].filter(t => t !== tsk);
+                            if (d.mapping[lbl].length === 0) { d.mapping[lbl].push("なし"); }
+                            saveCategoryData(d);
                         });
                         tskSpan.appendChild(delT);
                     }
                     ul.appendChild(tskSpan);
                 });
-                block.appendChild(ul); nestedStructure.appendChild(block);
+                block.appendChild(ul);
+                nestedStructure.appendChild(block);
             }
             setupFinishDropdowns();
         }
 
         function setupFinishDropdowns() {
-            const data = getCategoryData(); const currentSavedFinishLabel = finishLabelDropdown.value;
+            const data = getCategoryData();
+            const currentSavedFinishLabel = finishLabelDropdown.value;
+
             finishLabelDropdown.innerHTML = '';
             data.labels.forEach(lbl => {
-                const opt = document.createElement('option'); opt.value = lbl; opt.textContent = lbl; finishLabelDropdown.appendChild(opt);
+                const opt = document.createElement('option');
+                opt.value = lbl; opt.textContent = lbl;
+                finishLabelDropdown.appendChild(opt);
             });
             finishLabelDropdown.onchange = () => {
-                const currentLabel = finishLabelDropdown.value; finishTaskDropdown.innerHTML = '';
+                const currentLabel = finishLabelDropdown.value;
+                finishTaskDropdown.innerHTML = '';
                 const tasks = data.mapping[currentLabel] || ["なし"];
                 tasks.forEach(tsk => {
-                    const opt = document.createElement('option'); opt.value = tsk; opt.textContent = tsk; finishTaskDropdown.appendChild(opt);
+                    const opt = document.createElement('option');
+                    opt.value = tsk; opt.textContent = tsk;
+                    finishTaskDropdown.appendChild(opt);
                 });
             };
-            if (currentSavedFinishLabel && data.labels.includes(currentSavedFinishLabel)) { finishLabelDropdown.value = currentSavedFinishLabel; }
+            if (currentSavedFinishLabel && data.labels.includes(currentSavedFinishLabel)) {
+                finishLabelDropdown.value = currentSavedFinishLabel;
+            }
             finishLabelDropdown.onchange();
         }
 
-        // --- 4. 履歴ログ・インライン編集の制御 ---
         function checkAndResetDailyRecords() {
-            const currentTargetDate = getTargetDateStr(); const savedDate = localStorage.getItem('poyu_timer_date');
+            const currentTargetDate = getTargetDateStr();
+            const savedDate = localStorage.getItem('poyu_timer_date');
             if (savedDate !== currentTargetDate) {
-                localStorage.setItem('poyu_timer_date', currentTargetDate); recordList.innerHTML = ''; totalStudyTimeDisplay.textContent = "0分00秒";
+                localStorage.setItem('poyu_timer_date', currentTargetDate);
+                recordList.innerHTML = '';
+                totalStudyTimeDisplay.textContent = "0分00秒";
             }
         }
 
         function getGlobalLogs() {
-            const logs = localStorage.getItem('poyu_global_logs'); return logs ? JSON.parse(logs) : {};
+            const logs = localStorage.getItem('poyu_global_logs');
+            return logs ? JSON.parse(logs) : {};
         }
 
         function saveToGlobalLogs(title, timeString, rawSec, memo) {
-            const dateStr = getTargetDateStr(); const logs = getGlobalLogs();
+            const dateStr = getTargetDateStr();
+            const logs = getGlobalLogs();
             if (!logs[dateStr]) { logs[dateStr] = []; }
             logs[dateStr].push({ title: title, time: timeString, rawSeconds: rawSec, memo: memo || "" });
             localStorage.setItem('poyu_global_logs', JSON.stringify(logs));
@@ -666,57 +1115,295 @@
             if (logs[dateStr] && logs[dateStr][index]) {
                 const formattedTask = (newTask === "なし" || !newTask) ? "" : ` ${newTask}`;
                 logs[dateStr][index].title = `[${newLabel}]${formattedTask}`;
-                localStorage.setItem('poyu_global_logs', JSON.stringify(logs)); 
-                loadRecords();
-                // グラフも再描画してリアルタイムに連動
-                renderWeekChart(document.getElementById('weekPicker').value);
-                renderMonthChart(document.getElementById('yearSelect').value);
+                localStorage.setItem('poyu_global_logs', JSON.stringify(logs));
+                loadRecords(); 
             }
         }
 
         function createRecordLiElement(rec, index, dateStr) {
-            const li = document.createElement('li'); li.className = 'record-item';
-            const currentLabel = parseLabelFromTitle(rec.title); li.style.borderLeft = `4px solid ${getLabelColor(currentLabel)}`;
+            const li = document.createElement('li');
+            li.className = 'record-item';
+            
+            const currentLabel = parseLabelFromTitle(rec.title);
+            li.style.borderLeft = `4px solid ${getLabelColor(currentLabel)}`;
 
-            const row = document.createElement('div'); row.className = 'record-item-row';
-            const titleSpan = document.createElement('span'); titleSpan.className = 'record-title-text';
-            if (rec.memo) { titleSpan.innerHTML = `${rec.title} <span style="color:#718096; font-size:0.85rem; font-weight:normal;">(${rec.memo})</span>`; } 
-            else { titleSpan.textContent = rec.title; }
+            const row = document.createElement('div');
+            row.className = 'record-item-row';
 
-            const timeSpan = document.createElement('span'); timeSpan.className = 'time-span';
-            timeSpan.style.color = getLabelColor(currentLabel); timeSpan.textContent = rec.time;
+            const titleSpan = document.createElement('span');
+            titleSpan.className = 'record-title-text';
+            
+            if (rec.memo) {
+                titleSpan.innerHTML = `${rec.title} <span style="color:#718096; font-size:0.85rem; font-weight:normal;">(${rec.memo})</span>`;
+            } else {
+                titleSpan.textContent = rec.title;
+            }
 
-            const editBtn = document.createElement('span'); editBtn.className = 'edit-trigger-btn'; editBtn.textContent = '✏️';
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'time-span';
+            timeSpan.style.color = getLabelColor(currentLabel);
+            timeSpan.textContent = rec.time;
 
-            row.appendChild(titleSpan); row.appendChild(timeSpan); row.appendChild(editBtn); li.appendChild(row);
+            const editBtn = document.createElement('span');
+            editBtn.className = 'edit-trigger-btn';
+            editBtn.textContent = '✏️';
 
-            const editBox = document.createElement('div'); editBox.className = 'edit-inline-box'; editBox.style.display = 'none';
-            const lblSelect = document.createElement('select'); const tskSelect = document.createElement('select');
-            const saveBtn = document.createElement('button'); saveBtn.className = 'edit-save-btn'; saveBtn.textContent = '保存';
-            const cancelBtn = document.createElement('button'); cancelBtn.className = 'edit-cancel-btn'; cancelBtn.textContent = '×';
+            row.appendChild(titleSpan);
+            row.appendChild(timeSpan);
+            row.appendChild(editBtn);
+            li.appendChild(row);
 
-            editBox.appendChild(lblSelect); editBox.appendChild(tskSelect); editBox.appendChild(saveBtn); editBox.appendChild(cancelBtn); li.appendChild(editBox);
+            const editBox = document.createElement('div');
+            editBox.className = 'edit-inline-box';
+            editBox.style.display = 'none';
+
+            const lblSelect = document.createElement('select');
+            const tskSelect = document.createElement('select');
+            const saveBtn = document.createElement('button');
+            saveBtn.className = 'edit-save-btn'; saveBtn.textContent = '保存';
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'edit-cancel-btn'; cancelBtn.textContent = '×';
+
+            editBox.appendChild(lblSelect);
+            editBox.appendChild(tskSelect);
+            editBox.appendChild(saveBtn);
+            editBox.appendChild(cancelBtn);
+            li.appendChild(editBox);
 
             editBtn.addEventListener('click', () => {
-                const data = getCategoryData(); lblSelect.innerHTML = '';
-                data.labels.forEach(l => { const opt = document.createElement('option'); opt.value = l; opt.textContent = l; lblSelect.appendChild(opt); });
+                const data = getCategoryData();
+                lblSelect.innerHTML = '';
+                data.labels.forEach(l => {
+                    const opt = document.createElement('option');
+                    opt.value = l; opt.textContent = l;
+                    lblSelect.appendChild(opt);
+                });
+
                 lblSelect.onchange = () => {
-                    tskSelect.innerHTML = ''; const tasks = data.mapping[lblSelect.value] || ["なし"];
-                    tasks.forEach(t => { const opt = document.createElement('option'); opt.value = t; opt.textContent = t; tskSelect.appendChild(opt); });
+                    tskSelect.innerHTML = '';
+                    const tasks = data.mapping[lblSelect.value] || ["なし"];
+                    tasks.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t; opt.textContent = t;
+                        tskSelect.appendChild(opt);
+                    });
                 };
 
-                let labelSeed = "その他"; let taskSeed = "なし";
+                let labelSeed = "その他";
+                let taskSeed = "なし";
                 const match = rec.title.match(/^\[(.*?)\]\s*(.*)$/);
-                if (match) { labelSeed = match[1]; taskSeed = match[2] || "なし"; }
+                if (match) {
+                    labelSeed = match[1];
+                    taskSeed = match[2] || "なし";
+                }
+
                 if (data.labels.includes(labelSeed)) { lblSelect.value = labelSeed; }
                 lblSelect.onchange();
                 if ((data.mapping[lblSelect.value] || []).includes(taskSeed)) { tskSelect.value = taskSeed; }
-                row.style.display = 'none'; editBox.style.display = 'flex';
+
+                row.style.display = 'none';
+                editBox.style.display = 'flex';
             });
 
-            saveBtn.addEventListener('click', () => { updateLogItemCategory(dateStr, index, lblSelect.value, tskSelect.value); });
-            cancelBtn.addEventListener('click', () => { editBox.style.display = 'none'; row.style.display = 'flex'; });
+            saveBtn.addEventListener('click', () => {
+                updateLogItemCategory(dateStr, index, lblSelect.value, tskSelect.value);
+            });
+
+            cancelBtn.addEventListener('click', () => {
+                editBox.style.display = 'none';
+                row.style.display = 'flex';
+            });
+
             return li;
+        }
+
+        function buildStackedBar(daySets, maxSeconds, wrapper) {
+            const barStack = document.createElement('div');
+            barStack.className = 'chart-bar-stack';
+
+            const totalSec = daySets.reduce((sum, item) => sum + item.rawSeconds, 0);
+            if (totalSec === 0) {
+                barStack.style.height = '2%';
+                wrapper.appendChild(barStack);
+                return;
+            }
+
+            const heightPercent = (totalSec / maxSeconds) * 85;
+            barStack.style.height = `${Math.max(heightPercent, 2)}%`;
+
+            const labelSecondsMap = {};
+            daySets.forEach(item => {
+                const lbl = parseLabelFromTitle(item.title);
+                labelSecondsMap[lbl] = (labelSecondsMap[lbl] || 0) + item.rawSeconds;
+            });
+
+            for (const lbl in labelSecondsMap) {
+                const segmentSec = labelSecondsMap[lbl];
+                const segmentPercent = (segmentSec / totalSec) * 100;
+
+                const segment = document.createElement('div');
+                segment.className = 'chart-bar-segment';
+                segment.style.height = `${segmentPercent}%`;
+                segment.style.backgroundColor = getLabelColor(lbl);
+                segment.title = `${lbl}: ${formatSecondsToText(segmentSec)}`;
+                barStack.appendChild(segment);
+            }
+
+            wrapper.appendChild(barStack);
+        }
+
+        function drawWeekChart() {
+            chartContainerWeek.innerHTML = '';
+            const logs = getGlobalLogs();
+            const baseDate = getTargetDateObject();
+            const dateList = [];
+
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(baseDate.getTime() - (i * 24 * 60 * 60 * 1000));
+                dateList.push(`${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`);
+            }
+
+            let maxSeconds = 1;
+            dateList.forEach(dateStr => {
+                const daySets = logs[dateStr] || [];
+                const totalSec = daySets.reduce((sum, item) => sum + item.rawSeconds, 0);
+                if (totalSec > maxSeconds) { maxSeconds = totalSec; }
+            });
+
+            dateList.forEach((dateStr) => {
+                const daySets = logs[dateStr] || [];
+                const wrapper = document.createElement('div');
+                wrapper.className = 'chart-bar-wrapper';
+                if (dateStr === getTargetDateStr()) { wrapper.classList.add('active'); }
+
+                buildStackedBar(daySets, maxSeconds, wrapper);
+
+                const label = document.createElement('div');
+                label.className = 'chart-label';
+                label.textContent = dateStr.substring(5); 
+
+                wrapper.appendChild(label);
+                
+                wrapper.addEventListener('click', () => {
+                    chartContainerWeek.querySelectorAll('.chart-bar-wrapper').forEach(w => w.classList.remove('active'));
+                    wrapper.classList.add('active');
+                    showDayDetail(dateStr);
+                });
+                chartContainerWeek.appendChild(wrapper);
+            });
+
+            const activeWrapper = chartContainerWeek.querySelector('.chart-bar-wrapper.active');
+            if (activeWrapper) {
+                const curLabelText = activeWrapper.querySelector('.chart-label').textContent;
+                const foundDate = dateList.find(d => d.endsWith(curLabelText));
+                showDayDetail(foundDate || getTargetDateStr());
+            } else {
+                showDayDetail(getTargetDateStr());
+            }
+        }
+
+        function drawMonthChart() {
+            chartContainerMonth.innerHTML = '';
+            const logs = getGlobalLogs();
+            const baseDate = getTargetDateObject();
+            const monthList = []; 
+
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(baseDate.getFullYear(), baseDate.getMonth() - i, 1);
+                const y = d.getFullYear(); const m = d.getMonth() + 1;
+                monthList.push({ year: y, month: m, label: `${m}月`, key: `${y}-${m.toString().padStart(2, '0')}` });
+            }
+
+            const monthlyDataSets = monthList.map(mInfo => {
+                let mergedSets = [];
+                for (const dateKey in logs) {
+                    if (dateKey.startsWith(mInfo.key)) {
+                        mergedSets = mergedSets.concat(logs[dateKey] || []);
+                    }
+                }
+                return mergedSets;
+            });
+
+            let maxMonthSeconds = 1;
+            monthlyDataSets.forEach(sets => {
+                const sec = sets.reduce((sum, item) => sum + item.rawSeconds, 0);
+                if (sec > maxMonthSeconds) maxMonthSeconds = sec;
+            });
+
+            const currentMonthKey = `${baseDate.getFullYear()}-${(baseDate.getMonth() + 1).toString().padStart(2, '0')}`;
+
+            monthList.forEach((mInfo, idx) => {
+                const daySets = monthlyDataSets[idx];
+                const wrapper = document.createElement('div');
+                wrapper.className = 'chart-bar-wrapper';
+                if (mInfo.key === currentMonthKey) { wrapper.classList.add('active'); }
+
+                buildStackedBar(daySets, maxMonthSeconds, wrapper);
+
+                const label = document.createElement('div');
+                label.className = 'chart-label';
+                label.textContent = mInfo.label;
+
+                wrapper.appendChild(label);
+
+                wrapper.addEventListener('click', () => {
+                    chartContainerMonth.querySelectorAll('.chart-bar-wrapper').forEach(w => w.classList.remove('active'));
+                    wrapper.classList.add('active');
+                    const currentTotal = daySets.reduce((sum, item) => sum + item.rawSeconds, 0);
+                    showMonthDetail(mInfo.key, mInfo.year, mInfo.month, currentTotal);
+                });
+                chartContainerMonth.appendChild(wrapper);
+            });
+
+            const curMIdx = monthList.findIndex(m => m.key === currentMonthKey);
+            const initialTotal = monthlyDataSets[curMIdx].reduce((sum, item) => sum + item.rawSeconds, 0);
+            showMonthDetail(currentMonthKey, baseDate.getFullYear(), baseDate.getMonth() + 1, initialTotal);
+        }
+
+        function showDayDetail(dateStr) {
+            const logs = getGlobalLogs();
+            const daySets = logs[dateStr] || [];
+            const totalSec = daySets.reduce((sum, item) => sum + item.rawSeconds, 0);
+            
+            selectedDayTitleWeek.innerHTML = `${dateStr.replace(/-/g, '/')}<br><span style="font-size:0.85rem; color:#7bc0e3;">総時間: ${formatSecondsToText(totalSec)}</span>`;
+            historyListWeek.innerHTML = '';
+            if (daySets.length === 0) {
+                historyListWeek.innerHTML = '<li class="record-item" style="color:#94a3b8;">この日の記録はありません</li>';
+                return;
+            }
+            daySets.forEach((set, index) => {
+                const li = createRecordLiElement(set, index, dateStr);
+                historyListWeek.appendChild(li);
+            });
+        }
+
+        function showMonthDetail(monthKey, year, month, totalSec) {
+            const logs = getGlobalLogs();
+            selectedDayTitleMonth.innerHTML = `${year}/${month.toString().padStart(2, '0')}<br><span style="font-size:0.85rem; color:#7bc0e3;">月間総時間: ${formatSecondsToText(totalSec)}</span>`;
+            historyListMonth.innerHTML = '';
+
+            const dayMap = {};
+            for (const dateKey in logs) {
+                if (dateKey.startsWith(monthKey)) {
+                    const dayTotalSec = (logs[dateKey] || []).reduce((sum, item) => sum + item.rawSeconds, 0);
+                    if (dayTotalSec > 0) { dayMap[dateKey] = dayTotalSec; }
+                }
+            }
+
+            const sortedDates = Object.keys(dayMap).sort();
+            if (sortedDates.length === 0) {
+                historyListMonth.innerHTML = '<li class="record-item" style="color:#94a3b8;">この月の記録はありません</li>';
+                return;
+            }
+            sortedDates.forEach(dateKey => {
+                const li = document.createElement('li');
+                li.className = 'record-item';
+                li.style.flexDirection = 'row';
+                li.style.justifyContent = 'space-between';
+                li.style.borderLeft = "4px solid #cbd5e1";
+                li.innerHTML = `${dateKey.replace(/-/g, '/')} <span class="time-span" style="color:#4a5568;">${formatSecondsToText(dayMap[dateKey])}</span>`;
+                historyListMonth.appendChild(li);
+            });
         }
 
         function loadRecords() {
@@ -724,181 +1411,26 @@
             const currentTargetDate = getTargetDateStr();
             const logs = getGlobalLogs();
             const todaySets = logs[currentTargetDate] || [];
+            
             recordList.innerHTML = '';
             todaySets.forEach((rec, index) => {
                 const li = createRecordLiElement(rec, index, currentTargetDate);
                 recordList.appendChild(li);
             });
+
             const todayTotal = todaySets.reduce((sum, item) => sum + item.rawSeconds, 0);
             totalStudyTimeDisplay.textContent = formatSecondsToText(todayTotal);
+            
+            drawWeekChart();
+            drawMonthChart();
         }
 
-        // --- 5. ★バグ修正済：Chart.js週間・月間グラフ集計描画処理 ---
-        let myWeekChart = null;
-        let myMonthChart = null;
-
-        function getWeekRangeLabel(weekValue) {
-            if (!weekValue) return "選択してください";
-            const [year, week] = weekValue.split('-W');
-            const firstDayOfYear = new Date(year, 0, 1); const firstMonday = new Date(firstDayOfYear);
-            const day = firstDayOfYear.getDay(); const diff = (day <= 1) ? (1 - day) : (8 - day);
-            firstMonday.setDate(firstDayOfYear.getDate() + diff);
-            const monday = new Date(firstMonday); monday.setDate(firstMonday.getDate() + (week - 1) * 7);
-            const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
-            return `${monday.getMonth() + 1}/${monday.getDate()} ~ ${sunday.getMonth() + 1}/${sunday.getDate()}`;
-        }
-
-        // 週間グラフ
-        function renderWeekChart(weekValue) {
-            if (!weekValue) return;
-            if (myWeekChart) myWeekChart.destroy();
-            
-            const logs = getGlobalLogs();
-            const [year, weekNum] = weekValue.split('-W');
-            
-            // 選択された週の月曜日を正確に割り出し
-            const firstDayOfYear = new Date(year, 0, 1);
-            const day = firstDayOfYear.getDay();
-            const diff = (day <= 1) ? (1 - day) : (8 - day);
-            const firstMonday = new Date(firstDayOfYear);
-            firstMonday.setDate(firstDayOfYear.getDate() + diff);
-            
-            const monday = new Date(firstMonday);
-            monday.setDate(firstMonday.getDate() + (weekNum - 1) * 7);
-            
-            const weekData = new Array(7).fill(0);
-            const weekDatesStr = [];
-            
-            for (let i = 0; i < 7; i++) {
-                const d = new Date(monday);
-                d.setDate(monday.getDate() + i);
-                const dStr = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
-                weekDatesStr.push(dStr);
-                
-                if (logs[dStr]) {
-                    const totalSec = logs[dStr].reduce((sum, item) => sum + item.rawSeconds, 0);
-                    weekData[i] = Math.round(totalSec / 60); // 分単位に変換
-                }
-            }
-
-            const ctx = document.getElementById('chartContainerWeek').getContext('2d');
-            myWeekChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['月', '火', '水', '木', '金', '土', '日'],
-                    datasets: [{ label: '勉強時間(分)', data: weekData, backgroundColor: '#7bc0e3' }]
-                },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    scales: { y: { beginAtZero: true } },
-                    onClick: (event, elements) => {
-                        if (elements.length > 0) {
-                            const idx = elements[0].index;
-                            const targetDate = weekDatesStr[idx];
-                            showDayDetails('Week', targetDate);
-                        }
-                    }
-                }
-            });
-        }
-
-        // 月間グラフ
-        function renderMonthChart(yearValue) {
-            if (!yearValue) return;
-            if (myMonthChart) myMonthChart.destroy();
-            
-            const logs = getGlobalLogs();
-            const monthData = new Array(12).fill(0);
-            
-            Object.keys(logs).forEach(dateStr => {
-                const logDate = new Date(dateStr);
-                if (logDate.getFullYear() == yearValue) {
-                    const totalSec = logs[dateStr].reduce((sum, item) => sum + item.rawSeconds, 0);
-                    monthData[logDate.getMonth()] += Math.round(totalSec / 60);
-                }
-            });
-
-            const ctx = document.getElementById('chartContainerMonth').getContext('2d');
-            myMonthChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
-                    datasets: [{ label: '勉強時間(分)', data: monthData, backgroundColor: '#7bc0e3' }]
-                },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false,
-                    onClick: (event, elements) => {
-                        if (elements.length > 0) {
-                            const idx = elements[0].index;
-                            showMonthDetails(yearValue, idx);
-                        }
-                    }
-                }
-            });
-        }
-
-        // グラフタップ連動による詳細履歴表示
-        function showDayDetails(type, dateStr) {
-            const titleEl = document.getElementById(`selectedDayTitle${type}`);
-            const listEl = document.getElementById(`historyList${type}`);
-            listEl.innerHTML = '';
-            
-            const parts = dateStr.split('-');
-            titleEl.textContent = `${parts[1]}月${parts[2]}日の詳細`;
-            
-            const logs = getGlobalLogs();
-            const dayLogs = logs[dateStr] || [];
-            
-            if (dayLogs.length === 0) {
-                listEl.innerHTML = '<li>この日の記録はありません</li>';
-                return;
-            }
-            
-            dayLogs.forEach(item => {
-                const li = document.createElement('li');
-                li.style.padding = '4px 0';
-                li.innerHTML = `• <span style="font-weight:bold; color:#7bc0e3;">${item.title}</span> - ${item.time} ${item.memo ? `<span style="color:#64748b;">(${item.memo})</span>`:''}`;
-                listEl.appendChild(li);
-            });
-        }
-
-        function showMonthDetails(year, monthIdx) {
-            const titleEl = document.getElementById('selectedDayTitleMonth');
-            const listEl = document.getElementById('historyListMonth');
-            listEl.innerHTML = '';
-            titleEl.textContent = `${monthIdx + 1}月の合計詳細`;
-            
-            const logs = getGlobalLogs();
-            let matchCount = 0;
-            
-            Object.keys(logs).sort().forEach(dateStr => {
-                const d = new Date(dateStr);
-                if (d.getFullYear() == year && d.getMonth() == monthIdx) {
-                    logs[dateStr].forEach(item => {
-                        matchCount++;
-                        const li = document.createElement('li');
-                        li.style.padding = '4px 0';
-                        const p = dateStr.split('-');
-                        li.innerHTML = `[${p[1]}/${p[2]}] <b>${item.title}</b>: ${item.time} ${item.memo ? `(${item.memo})`:''}`;
-                        listEl.appendChild(li);
-                    });
-                }
-            });
-            
-            if (matchCount === 0) {
-                listEl.innerHTML = '<li>この月の記録はありません</li>';
-            }
-        }
-
-        // --- 6. タイマーコア制御ロジック ---
         function updateDisplay() {
             if (mode === 'work25' && timeLeft < 0) {
-                const overTime = Math.abs(timeLeft);
+                const overTime = Math.abs(timeLeft); 
                 if (overTime <= 5) { timerDisplay.textContent = "25:00"; } 
                 else {
-                    const totalSeconds = (25 * 60) + overTime;
+                    const totalSeconds = (25 * 60) + overTime; 
                     const minutes = Math.floor(totalSeconds / 60); const seconds = totalSeconds % 60;
                     timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
                 }
@@ -916,17 +1448,26 @@
 
                 if (mode === 'work25') {
                     if (timeLeft === 0) {
-                        playBeep(); statusDisplay.textContent = "集中終了！オーバータイム突入";
-                        timerDisplay.style.color = "#ff8e75"; totalWork25Count++; 
-                        choiceArea.style.display = 'block'; startBtn.disabled = true; startBtn.textContent = 'カウント中';
+                        playBeep();
+                        statusDisplay.textContent = "集中終了！オーバータイム突入";
+                        timerDisplay.style.color = "#ff8e75"; 
+                        totalWork25Count++; 
+                        
+                        // ★バグ修正：オーバータイム突入時にも休憩・継続ボタン（選択エリア）を出す
+                        choiceArea.style.display = 'block';
+                        startBtn.disabled = true; 
+                        startBtn.textContent = 'カウント中';
                     }
                     updateDisplay();
                 } else {
                     updateDisplay();
                     if (mode === 'first' && timeLeft <= 0) {
-                        mode = 'choosing'; timeLeft = TIME_CHOOSING; 
+                        // ★最初の1分終了時に確実に選択画面へ移行
+                        mode = 'choosing'; 
+                        timeLeft = TIME_CHOOSING; 
                         statusDisplay.textContent = "どっちにする？ (自動継続まであと少し)";
-                        timerDisplay.style.color = "#ef4444"; choiceArea.style.display = 'block';
+                        timerDisplay.style.color = "#ef4444"; 
+                        choiceArea.style.display = 'block'; 
                     } 
                     else if (mode === 'choosing' && timeLeft <= 0) { goToContinue(); }
                     else if (mode === 'break' && timeLeft <= 0) { playBeep(); goToFirstModeAutoStart(); }
@@ -936,110 +1477,239 @@
         }
 
         function goToFirstModeAutoStart() {
-            mode = 'first'; timeLeft = TIME_FIRST; statusDisplay.textContent = "最初の集中！";
+            mode = 'first'; timeLeft = TIME_FIRST; 
+            statusDisplay.textContent = "最初の集中！";
             timerDisplay.style.color = "#7bc0e3"; choiceArea.style.display = 'none'; endBreakBtn.style.display = 'none'; 
-            startBtn.classList.remove('over-break'); startBtn.textContent = 'カウント中';
-            startBtn.disabled = true; hasContinuedInCurrentLoop = false; updateDisplay();
+            startBtn.classList.remove('over-break'); startBtn.textContent = 'カウント中'; startBtn.disabled = true;
+            hasContinuedInCurrentLoop = false; updateDisplay();
         }
 
+        // ★バグ修正：リセット時にタイマーを完全に初期化して最初の集中（1分）に戻す
         function stopAndBackToFirst() {
-            if (timerId !== null) { clearInterval(timerId); timerId = null; }
-            mode = 'first'; timeLeft = TIME_FIRST; statusDisplay.textContent = "最初の集中！";
-            timerDisplay.style.color = "#7bc0e3"; choiceArea.style.display = 'none'; endBreakBtn.style.display = 'none'; 
-            taskSelectArea.style.display = 'none'; startBtn.classList.remove('over-break'); startBtn.disabled = false; startBtn.textContent = 'スタート';
-            totalElapsedBeforeContinue = 0; totalOverTimeSeconds = 0; totalWork25Count = 0; hasContinuedInCurrentLoop = false; updateDisplay();
+            if (timerId !== null) {
+                clearInterval(timerId); 
+                timerId = null;
+            }
+            mode = 'first'; 
+            timeLeft = TIME_FIRST; // 1分にリセット
+            statusDisplay.textContent = "最初の集中！";
+            timerDisplay.style.color = "#7bc0e3"; 
+            choiceArea.style.display = 'none'; 
+            endBreakBtn.style.display = 'none'; 
+            taskSelectArea.style.display = 'none'; 
+            startBtn.classList.remove('over-break'); 
+            startBtn.disabled = false; 
+            startBtn.textContent = 'スタート';
+            totalElapsedBeforeContinue = 0; 
+            totalOverTimeSeconds = 0; 
+            totalWork25Count = 0; 
+            hasContinuedInCurrentLoop = false; 
+            updateDisplay(); // 画面表示を「01:00」に更新
         }
 
         function goToContinue() {
-            mode = 'work25'; timeLeft = TIME_WORK25; statusDisplay.textContent = "作業中！(25分集中)";
+            mode = 'work25'; timeLeft = TIME_WORK25; 
+            statusDisplay.textContent = "作業中！(25分集中)";
             timerDisplay.style.color = "#7bc0e3"; choiceArea.style.display = 'none'; endBreakBtn.style.display = 'none'; 
-            hasContinuedInCurrentLoop = true; startBtn.classList.remove('over-break');
-            startBtn.textContent = 'カウント中'; startBtn.disabled = true; updateDisplay();
+            hasContinuedInCurrentLoop = true; startBtn.classList.remove('over-break'); startBtn.textContent = 'カウント中'; startBtn.disabled = true;
+            updateDisplay();
         }
 
         function goToBreak() {
-            mode = 'break'; timeLeft = TIME_BREAK; statusDisplay.textContent = "休憩中！(5分)";
+            mode = 'break'; timeLeft = TIME_BREAK; 
+            statusDisplay.textContent = "休憩中！(5分)";
             timerDisplay.style.color = "#57c7a3"; choiceArea.style.display = 'none';
             if (totalWork25Count > 0) { endBreakBtn.style.display = 'inline-block'; }
-            startBtn.classList.remove('over-break'); startBtn.textContent = 'カウント中'; startBtn.disabled = true; updateDisplay();
+            startBtn.classList.remove('over-break'); startBtn.textContent = 'カウント中'; startBtn.disabled = true;
+            updateDisplay();
         }
 
-        // ボタン群のイベントリスナー（★これで完全に紐づいて動きます）
         startBtn.addEventListener('click', () => {
             if (startBtn.classList.contains('over-break')) { goToBreak(); } else { if (timerId === null) { startTimer(); } }
         });
         resetBtn.addEventListener('click', stopAndBackToFirst);
 
         endBreakBtn.addEventListener('click', () => {
-            if (timerId !== null) { clearInterval(timerId); timerId = null; }
-            setupFinishDropdowns(); taskSelectArea.style.display = 'flex'; endBreakBtn.style.display = 'none';
+            if (timerId !== null) {
+                clearInterval(timerId);
+                timerId = null;
+            }
+            setupFinishDropdowns(); 
+            taskSelectArea.style.display = 'flex'; 
+            endBreakBtn.style.display = 'none';
         });
 
         saveRecordBtn.addEventListener('click', () => {
-            playBeep(); checkAndResetDailyRecords();
+            playBeep(); 
+            checkAndResetDailyRecords();
+
             const totalSeconds = totalElapsedBeforeContinue + (totalWork25Count * TIME_WORK25) + totalOverTimeSeconds;
             const timeString = formatSecondsToText(totalSeconds);
+            
             const selectedLabel = finishLabelDropdown.value;
-            let selectedTask = finishTaskDropdown.value; if (selectedTask === "なし") { selectedTask = ""; }
+            let selectedTask = finishTaskDropdown.value;
+            if (selectedTask === "なし") { selectedTask = ""; }
+
             const displayTitle = selectedTask ? `[${selectedLabel}] ${selectedTask}` : `[${selectedLabel}]`;
-            const memoValue = finishMemoInput.value.trim(); const savedLabel = finishLabelDropdown.value;
+            
+            const memoValue = finishMemoInput.value.trim();
+            const savedLabel = finishLabelDropdown.value;
 
             saveToGlobalLogs(displayTitle, timeString, totalSeconds, memoValue);
             loadRecords();
-            
-            // 保存後に即時グラフ再集計・更新
-            renderWeekChart(document.getElementById('weekPicker').value);
-            renderMonthChart(document.getElementById('yearSelect').value);
 
             stopAndBackToFirst(); 
-            finishLabelDropdown.value = savedLabel; finishLabelDropdown.dispatchEvent(new Event('change'));
+
+            finishLabelDropdown.value = savedLabel;
+            finishLabelDropdown.dispatchEvent(new Event('change'));
+            
             finishMemoInput.value = ""; 
         });
 
         breakBtn.addEventListener('click', goToBreak);
         continueBtn.addEventListener('click', goToContinue);
 
-        // 各種グラフピッカーの変更監視
-        document.getElementById('weekPicker').addEventListener('change', (e) => {
-            document.getElementById('selectedDayTitleWeek').textContent = getWeekRangeLabel(e.target.value);
-            renderWeekChart(e.target.value);
+        clearAllDataBtn.addEventListener('click', () => {
+            if (!confirm("本当にすべてのデータを削除しますか？\n登録したラベルやタスク名、これまでの勉強記録ログがすべて消去され、元に戻せなくなります。")) return;
+            if (!confirm("【最終確認】本当に初期化してよろしいですか？（蓄積されたデータがすべてまっさらになります）")) return;
+
+            localStorage.removeItem('poyu_category_data');
+            localStorage.removeItem('poyu_global_logs');
+            localStorage.removeItem('poyu_timer_date');
+
+            alert("すべてのデータをリセットしました。アプリを再読み込みします。");
+            location.reload(); 
         });
 
-        document.getElementById('yearSelect').addEventListener('change', (e) => {
-            renderMonthChart(e.target.value);
-        });
+        // 画面の初期化
+        statusDisplay.textContent = "最初の集中！";
+        renderCategorySettings();
+        loadRecords();
+        updateDisplay();
 
-        // --- 7. 画面初期化の完全統合（DOMロード時） ---
-        window.addEventListener('DOMContentLoaded', () => {
-            statusDisplay.textContent = "最初の集中！";
-            renderCategorySettings();
-            
-            const now = new Date(); const year = now.getFullYear();
-            const yearSelect = document.getElementById('yearSelect');
-            if (yearSelect && yearSelect.options.length === 0) {
-                for (let i = year - 2; i <= year + 1; i++) {
-                    let opt = document.createElement('option'); opt.value = i; opt.textContent = i + "年";
-                    if (i === year) opt.selected = true; yearSelect.appendChild(opt);
-                }
-            }
-            
-            // 現在の週番号を正確に計算してインプットへ初期自動反映
-            const firstDayOfYear = new Date(year, 0, 1);
-            const pastDaysOfYear = (now - firstDayOfYear) / 86400000;
-            const weekNum = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
-            const weekValue = `${year}-W${weekNum.toString().padStart(2, '0')}`;
-            
-            document.getElementById('weekPicker').value = weekValue;
-            document.getElementById('yearSelect').value = year;
-            
-            loadRecords(); 
-            document.getElementById('selectedDayTitleWeek').textContent = getWeekRangeLabel(weekValue);
-            
-            // 初回グラフ描画実行
-            renderWeekChart(weekValue);
-            renderMonthChart(year);
-            updateDisplay();
-        });
+      // 1. グラフ管理用変数
+let myWeekChart = null;
+let myMonthChart = null;
+
+// 2. 週の日付範囲を計算する関数
+function getWeekRangeLabel(weekValue) {
+    const [year, week] = weekValue.split('-W');
+    const firstDayOfYear = new Date(year, 0, 1);
+    const firstMonday = new Date(firstDayOfYear);
+    const day = firstDayOfYear.getDay();
+    const diff = (day <= 1) ? (1 - day) : (8 - day);
+    firstMonday.setDate(firstDayOfYear.getDate() + diff);
+
+    const monday = new Date(firstMonday);
+    monday.setDate(firstMonday.getDate() + (week - 1) * 7);
+    
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    
+    return `${monday.getMonth() + 1}/${monday.getDate()} ~ ${sunday.getMonth() + 1}/${sunday.getDate()}`;
+}
+// 3. 週間グラフを描画する関数
+function renderWeekChart(weekValue) {
+    if (myWeekChart) myWeekChart.destroy();
+    
+    // '[]' を '{}' に変更し、辞書型として正しく読み込む
+    const logs = JSON.parse(localStorage.getItem('poyu_global_logs') || '{}');
+    const [year, weekNum] = weekValue.split('-W');
+    
+    const monday = new Date(year, 0, (weekNum - 1) * 7 + 1);
+    monday.setDate(monday.getDate() - monday.getDay() + 1);
+    
+    const weekData = new Array(7).fill(0);
+
+    // Object.keysを使って日付ごとに正しくループ処理する
+    Object.keys(logs).forEach(dateStr => {
+        const logDate = new Date(dateStr); 
+        const diffDays = Math.floor((logDate - monday) / (1000 * 60 * 60 * 24));
+        if (diffDays >= 0 && diffDays < 7) {
+            // その日のタスク（配列）から rawSeconds を合計して分に変換
+            const dayTotalSec = logs[dateStr].reduce((sum, item) => sum + (item.rawSeconds || 0), 0);
+            weekData[diffDays] += dayTotalSec / 60;
+        }
+    });
+    
+    const ctx = document.getElementById('chartContainerWeek').getContext('2d');
+    myWeekChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['月', '火', '水', '木', '金', '土', '日'],
+            datasets: [{
+                label: '勉強時間(分)',
+                data: weekData,
+                backgroundColor: '#7bc0e3'
+            }]
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+}
+
+// 4. 月間グラフを描画する関数
+function renderMonthChart(yearValue) {
+    if (myMonthChart) myMonthChart.destroy();
+    
+    // ここも '{}' に修正
+    const logs = JSON.parse(localStorage.getItem('poyu_global_logs') || '{}');
+    const monthData = new Array(12).fill(0);
+    
+    // Object.keysを使って日付ごとに正しくループ処理する
+    Object.keys(logs).forEach(dateStr => {
+        const logDate = new Date(dateStr);
+        if (logDate.getFullYear() == yearValue) {
+            const dayTotalSec = logs[dateStr].reduce((sum, item) => sum + (item.rawSeconds || 0), 0);
+            monthData[logDate.getMonth()] += dayTotalSec / 60;
+        }
+    });
+
+    const ctx = document.getElementById('chartContainerMonth').getContext('2d');
+    myMonthChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+            datasets: [{
+                label: '勉強時間(分)',
+                data: monthData,
+                backgroundColor: '#7bc0e3'
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+}
+
+// 5. イベントリスナー
+document.getElementById('weekPicker').addEventListener('change', (e) => {
+    document.getElementById('selectedDayTitleWeek').textContent = getWeekRangeLabel(e.target.value);
+    renderWeekChart(e.target.value);
+});
+
+document.getElementById('yearSelect').addEventListener('change', (e) => {
+    renderMonthChart(e.target.value);
+});
+
+// 6. ページ読み込み時の初期化（1回だけにまとめました）
+window.addEventListener('DOMContentLoaded', () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const firstDayOfYear = new Date(year, 0, 1);
+    const pastDaysOfYear = (now - firstDayOfYear) / 86400000;
+    const weekNum = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+    
+    const weekValue = `${year}-W${weekNum.toString().padStart(2, '0')}`;
+    document.getElementById('weekPicker').value = weekValue;
+    document.getElementById('yearSelect').value = year;
+    
+    document.getElementById('selectedDayTitleWeek').textContent = getWeekRangeLabel(weekValue);
+    renderWeekChart(weekValue);
+    renderMonthChart(year);
+});
+        
     </script>
 </body>
 </html>
