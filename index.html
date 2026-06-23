@@ -969,6 +969,35 @@ canvas {
             renderWeekChart(weekValue);
             renderMonthChart(year);
         });
+      // タイマーの開始処理
+startBtn.addEventListener('click', () => {
+    if (timerId !== null) return; // 既に動いている場合は何もしない
+
+    timerId = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = formatSecondsToText(timeLeft);
+
+        if (timeLeft <= 0) {
+            clearInterval(timerId);
+            timerId = null;
+            playBeep();
+            
+            // 終了時の処理（必要に応じてモード切り替えなど）
+            if (mode === 'first') {
+                statusDisplay.textContent = "終了！どうする？";
+                choiceArea.style.display = 'block';
+                startBtn.style.display = 'none';
+            } else {
+                // 通常モード終了時の挙動
+                statusDisplay.textContent = "時間です！記録しましょう";
+                taskSelectArea.style.display = 'flex';
+            }
+        }
+    }, 1000);
+
+    statusDisplay.textContent = "集中開始！";
+    startBtn.disabled = true; // ボタンを無効化
+});
     </script>
 </body>
 </html>
