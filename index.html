@@ -19,12 +19,27 @@
     
     /* サイドバーの基本設定 */
     #sidebar {
-        position: fixed; top: 0; left: -250px;
-        width: 250px; height: 100%; background: #f8f9fa;
-        transition: 0.3s; padding: 20px; overflow-y: auto;
+       position: fixed;
+    top: 0;
+    left: -100%; /* これで画面外に隠れる */
+    width: 100%; 
+    height: 100%;
+    background: #ffffff;
+    z-index: 9999; /* 確実に一番手前に */
+    transition: left 0.3s ease;
+    padding: 80px 20px 20px 20px;
+    box-sizing: border-box;
+    overflow-y: auto;
     }
     #sidebar.open { left: 0; }
-    
+            
+    .record-area {
+    width: 100%; 
+    margin-top: 30px;
+    background: #ffffff;
+    box-shadow: none; /* サイドバーの中に入るのでシャドウは不要 */
+}
+            
     /* 記録リストの表示切り替え */
     .menu-folder { display: none; } /* 初期状態は非表示 */
     #sidebar.open .menu-folder { display: block; } /* サイドバーが開いた時だけ表示 */
@@ -63,20 +78,7 @@
         #menuBtn.open .bar3 { transform: rotate(45deg) translate(-5px, -6px); }
 
         /* 左からスライドインするサイドパネル */
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: -500px; 
-            width: 450px;
-            height: 100vh;
-            background: #ffffff;
-            box-shadow: 4px 0 15px rgba(0,0,0,0.05);
-            z-index: 90;
-            transition: left 0.3s ease;
-            padding: 80px 20px 20px 20px;
-            box-sizing: border-box;
-            overflow-y: auto;
-        }
+       
         .sidebar.open { left: 0; }
 
         /* メニュー内の大見出し */
@@ -531,7 +533,15 @@
             </div>
         </div>
     </div>
-
+    
+<div class="record-area">
+        <h2>今日の記録</h2>
+        <ul id="recordList"></ul>
+        <div class="total-area">
+            合計勉強時間 <span id="totalStudyTime">0分00秒</span>
+        </div>
+    </div>
+    
     <div class="main-area">
         <h1>ぽゆたいまー</h1>
         <div id="status">最初の集中！</div>
@@ -562,13 +572,6 @@
         </div>
     </div>
 
-    <div class="record-area">
-        <h2>今日の記録</h2>
-        <ul id="recordList"></ul>
-        <div class="total-area">
-            合計勉強時間 <span id="totalStudyTime">0分00秒</span>
-        </div>
-    </div>
 
     <script>
         function playBeep() {
@@ -610,11 +613,19 @@
         const recordList = document.getElementById('recordList');
         const totalStudyTimeDisplay = document.getElementById('totalStudyTime');
         
-        const menuBtn = document.getElementById('menuBtn');
-        const sidebar = document.getElementById('sidebar');
-        menuBtn.addEventListener('click', () => {
+       // 既存のバラバラにある menuBtn の処理を削除し、以下のように1つだけ記述
+const menuBtn = document.getElementById('menuBtn');
+const sidebar = document.getElementById('sidebar');
+
+menuBtn.addEventListener('click', () => {
     sidebar.classList.toggle('open');
     menuBtn.classList.toggle('open');
+    
+    // サイドバーを開いたときにグラフを再描画する処理（もしあれば）
+    if(sidebar.classList.contains('open')) {
+        if(typeof drawWeekChart === 'function') drawWeekChart();
+        if(typeof drawMonthChart === 'function') drawMonthChart();
+    }
 });
         
         const chartContainerWeek = document.getElementById('chartContainerWeek');
@@ -693,14 +704,6 @@
             return `${mins}分${secs.toString().padStart(2, '0')}秒`;
         }
 
-        menuBtn.addEventListener('click', () => {
-            sidebar.classList.toggle('open');
-            menuBtn.classList.toggle('open');
-            if(sidebar.classList.contains('open')) {
-                drawWeekChart();
-                drawMonthChart();
-            } 
-        });
 
         document.querySelectorAll('.menu-folder-header').forEach(header => {
             header.addEventListener('click', () => {
