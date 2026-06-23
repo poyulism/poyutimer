@@ -1,0 +1,1500 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>ぽゆたいまー</title>
+    <style>
+        body { 
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif; 
+            background: #f4f9fc; 
+            color: #4a5568; 
+            padding-top: 60px; 
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 40px; 
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* 左上の3本線メニューボタン */
+        #menuBtn {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            width: 45px;
+            height: 45px;
+            background: #7bc0e3;
+            color: white;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: 0 4px 10px rgba(123,192,227,0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+        #menuBtn:hover { background: #64b2da; transform: scale(1.05); }
+        
+        .bar {
+            width: 22px;
+            height: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 2px;
+        }
+        #menuBtn.open .bar1 { transform: rotate(-45deg) translate(-5px, 6px); }
+        #menuBtn.open .bar2 { opacity: 0; }
+        #menuBtn.open .bar3 { transform: rotate(45deg) translate(-5px, -6px); }
+
+        /* 左からスライドインするサイドパネル */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: -500px; 
+            width: 450px;
+            height: 100vh;
+            background: #ffffff;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.05);
+            z-index: 90;
+            transition: left 0.3s ease;
+            padding: 80px 20px 20px 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        .sidebar.open { left: 0; }
+
+        /* メニュー内の大見出し */
+        .menu-folder {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+        .menu-folder-header {
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #4a5568;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+        .menu-folder-header:hover {
+            background: #edf4f9;
+            color: #7bc0e3;
+        }
+        .menu-folder-header::after {
+            content: '▶';
+            font-size: 0.8rem;
+            color: #a0aec0;
+            transition: transform 0.2s;
+        }
+        .menu-folder.active .menu-folder-header::after {
+            transform: rotate(90deg);
+            color: #7bc0e3;
+        }
+
+        .menu-folder-content {
+            display: none;
+            padding: 15px;
+            background: #ffffff;
+            border-top: 1px solid #edf2f7;
+        }
+        .menu-folder.active .menu-folder-content { display: block; }
+
+        /* 円形カラーパレット */
+        .color-palette {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .color-circle {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+            box-shadow: inset 0 0 3px rgba(0,0,0,0.15);
+        }
+        .color-circle:hover { transform: scale(1.1); }
+        .color-circle.selected { border-color: #4a5568; transform: scale(1.15); box-shadow: 0 0 6px rgba(0,0,0,0.25); }
+
+        /* 編集用の小さな円形パレット */
+        .edit-color-palette {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+            flex-wrap: wrap;
+        }
+        .edit-color-circle {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.1s;
+        }
+        .edit-color-circle:hover { transform: scale(1.1); }
+        .edit-color-circle.selected { border-color: #4a5568; transform: scale(1.15); }
+
+        /* 管理エリアスタイル */
+        .manage-section {
+            border-bottom: 1px dashed #e2e8f0;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+        .manage-section:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+        .manage-section h4 { margin: 0 0 8px 0; font-size: 0.95rem; color: #64748b; }
+        
+        .task-input-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .task-input-row input[type="text"], .task-input-row select {
+            padding: 8px 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            outline: none;
+            background: white;
+            box-sizing: border-box;
+        }
+        .task-input-row select { width: 100%; }
+        .task-input-row input[type="text"] { flex: 1; }
+        .task-input-row input:focus, .task-input-row select:focus { border-color: #7bc0e3; }
+
+        /* 出現するタスク入力グループのアニメーション設定 */
+        #taskInputGroup {
+            display: none;
+            gap: 8px;
+            margin-top: 10px;
+            background: #f0f7f4;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px dashed #57c7a3;
+            animation: fadeInSlide 0.25s ease forwards;
+        }
+        @keyframes fadeInSlide {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .task-add-btn {
+            background: #7bc0e3; color: white; padding: 8px 16px; 
+            border-radius: 8px; font-size: 0.9rem; cursor: pointer; font-weight: bold; margin: 0; box-shadow: none;
+            border: none; white-space: nowrap;
+        }
+        .task-add-btn:hover { background: #64b2da; }
+        #addTaskBtn { background: #57c7a3; }
+        #addTaskBtn:hover { background: #45b391; }
+        
+        /* 登録済みラベルリスト */
+        .registered-tasks { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+        .label-manage-item {
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+            padding: 8px 12px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+            border: 1px solid #edf2f7;
+        }
+        .label-view-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+        .label-info-side {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+        .circle-dot {
+            width: 14px; height: 14px; border-radius: 50%; display: inline-block; box-shadow: inset 0 0 2px rgba(0,0,0,0.1);
+        }
+        .label-btn-side {
+            display: flex;
+            gap: 10px;
+            font-size: 0.85rem;
+        }
+        .label-edit-btn { color: #7bc0e3; cursor: pointer; font-weight: bold; }
+        .label-edit-btn:hover { color: #64b2da; }
+        .task-delete { color: #ef4444; cursor: pointer; font-weight: bold; }
+        .task-delete:hover { color: #dc2626; }
+
+        /* ラベル編集インラインフォーム */
+        .label-edit-box {
+            display: none;
+            gap: 6px;
+            background: #f1f5f9;
+            padding: 8px;
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: 6px;
+        }
+        .label-edit-box input {
+            padding: 4px 8px;
+            font-size: 0.9rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            outline: none;
+            flex: 1;
+        }
+
+        .nested-list { font-size: 0.9rem; color: #4a5568; margin-top: 15px; padding-left: 5px; }
+        .nested-item { margin-bottom: 8px; }
+
+        /* 棒グラフのコンテナ */
+        .chart-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            height: 160px;
+            padding: 10px 15px;
+            background: #f8fafc;
+            border-radius: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .chart-bar-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            cursor: pointer;
+            height: 100%;
+            justify-content: flex-end;
+        }
+        .chart-bar-stack {
+            width: 60%;
+            max-width: 35px;
+            display: flex;
+            flex-direction: column-reverse; 
+            border-radius: 5px 5px 0 0;
+            overflow: hidden;
+            transition: all 0.2s ease;
+            min-height: 2px; 
+            background: #e2e8f0; 
+        }
+        .chart-bar-segment {
+            width: 100%;
+            transition: opacity 0.2s;
+        }
+        .chart-bar-wrapper:hover .chart-bar-segment, .chart-bar-wrapper.active .chart-bar-segment {
+            filter: brightness(0.9); 
+        }
+        .chart-label {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-top: 6px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        /* 詳細表示エリア */
+        .history-detail-area {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 10px;
+        }
+        .history-detail-area h3 {
+            font-size: 1rem;
+            color: #4a5568;
+            margin: 0 0 10px 0;
+            line-height: 1.4;
+        }
+        .history-list { list-style: none; padding: 0; margin: 0; }
+
+        /* 記録アイテムインプレース編集 */
+        .edit-inline-box {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            background: #edf4f9;
+            padding: 4px;
+            border-radius: 8px;
+            width: 100%;
+            margin-top: 4px;
+        }
+        .edit-inline-box select {
+            padding: 4px;
+            font-size: 0.8rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            outline: none;
+            background: white;
+            max-width: 100px;
+        }
+        .edit-save-btn {
+            background: #57c7a3; color: white; border: none; padding: 4px 8px;
+            font-size: 0.8rem; border-radius: 4px; cursor: pointer; font-weight: bold;
+        }
+        .edit-cancel-btn {
+            background: #94a3b8; color: white; border: none; padding: 4px 8px;
+            font-size: 0.8rem; border-radius: 4px; cursor: pointer;
+        }
+
+        /* メインタイマーエリア */
+        .main-area {
+            text-align: center;
+            flex: 1;
+            max-width: 500px;
+        }
+        h1 { font-size: 2.5rem; color: #7bc0e3; margin-bottom: 10px; letter-spacing: 2px; }
+        #status {
+            font-size: 1.2rem; font-weight: bold; background: #ffffff;
+            padding: 8px 20px; border-radius: 20px; display: inline-block;
+            box-shadow: 0 4px 10px rgba(123, 192, 227, 0.15);
+        }
+        #timer { font-size: 7rem; font-weight: bold; color: #7bc0e3; margin: 15px 0; font-variant-numeric: tabular-nums; }
+        button { 
+            font-size: 1.2rem; font-weight: bold; padding: 12px 30px; margin: 8px; 
+            cursor: pointer; border: none; border-radius: 25px; transition: all 0.2s; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        #startBtn { background: #7bc0e3; color: white; }
+        #startBtn:hover:not(:disabled) { background: #64b2da; transform: translateY(-2px); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
+        #startBtn.over-break { background: #57c7a3; color: white; opacity: 1 !important; cursor: pointer !important; }
+        #startBtn.over-break:hover { background: #45b391; transform: translateY(-2px) !important; }
+        #resetBtn { background: #e1e8ed; color: #657786; }
+        #resetBtn:hover { background: #d4dee5; }
+        #endBreakBtn { background: #57c7a3; color: white; display: none; }
+        #endBreakBtn:hover { background: #45b391; transform: translateY(-2px); }
+
+        #choiceArea { margin-top: 20px; display: none; }
+        .choice-btn { font-size: 1.1rem; padding: 10px 25px; }
+        #breakBtn { background: #57c7a3; color: white; }
+        #breakBtn:hover { background: #45b391; }
+        #continueBtn { background: #7bc0e3; color: white; }
+        #continueBtn:hover { background: #64b2da; }
+
+        /* ★改善：終了時のタスク選択エリア（すりガラス背景モーダルウィンドウ化） */
+        #taskSelectArea {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.3); /* 暗度マスク */
+            backdrop-filter: blur(8px);    /* すりガラス効果 */
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 200; /* 最前面へ配置 */
+            display: none; /* JS側で中央寄せのために flex に切り替える */
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+            box-sizing: border-box;
+            animation: modalSlideUp 0.3s ease-out;
+        }
+        @keyframes modalSlideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        #taskSelectArea p { margin: 0 0 20px 0; font-size: 1.2rem; font-weight: bold; color: #4a5568; }
+        
+        /* モーダル内を縦配列に再設計 */
+        .select-layout { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+        #taskSelectArea select, #taskSelectArea input[type="text"] { 
+            padding: 12px; 
+            font-size: 1rem; 
+            border: 2px solid #e1e8ed; 
+            border-radius: 10px; 
+            outline: none; 
+            background: white; 
+            box-sizing: border-box;
+            width: 100%;
+        }
+        #taskSelectArea select:focus, #taskSelectArea input[type="text"]:focus { border-color: #7bc0e3; }
+        #saveRecordBtn { 
+            background: #7bc0e3; color: white; font-size: 1.1rem; padding: 12px; 
+            border-radius: 10px; cursor: pointer; font-weight: bold; margin: 5px 0 0 0; border: none; 
+            width: 100%;
+            box-shadow: 0 4px 6px rgba(123,192,227,0.2);
+        }
+        #saveRecordBtn:hover { background: #64b2da; transform: translateY(-1px); }
+
+        /* 今日の記録エリア（右側） */
+        .record-area {
+            width: 320px; background: #ffffff; border-radius: 20px; padding: 20px;
+            box-shadow: 0 4px 15px rgba(123, 192, 227, 0.15); text-align: left;
+            display: flex; flex-direction: column;
+        }
+        .record-area h2 {
+            font-size: 1.3rem; color: #7bc0e3; margin-top: 0; margin-bottom: 15px;
+            border-bottom: 2px solid #f4f9fc; padding-bottom: 8px;
+        }
+        #recordList { list-style: none; padding: 0; margin: 0; max-height: 280px; overflow-y: auto; }
+        .record-item { padding: 8px 10px; border-bottom: 1px solid #f4f9fc; font-size: 0.95rem; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+        .record-item-row { width: 100%; display: flex; justify-content: space-between; align-items: center; }
+        .record-title-text { flex: 1; margin-right: 6px; word-break: break-all; }
+        .record-item span.time-span { font-weight: bold; color: #57c7a3; white-space: nowrap; margin-right: 8px; }
+        .edit-trigger-btn { color: #7bc0e3; cursor: pointer; font-size: 0.9rem; user-select: none; }
+        .edit-trigger-btn:hover { color: #64b2da; }
+        .total-area { margin-top: 15px; padding-top: 15px; border-top: 2px dashed #e1e8ed; font-size: 1.05rem; font-weight: bold; color: #4a5568; display: flex; justify-content: space-between; align-items: center; }
+        #totalStudyTime { color: #7bc0e3; font-size: 1.2rem; }
+    </style>
+</head>
+<body>
+
+    <div id="menuBtn">
+        <div class="bar bar1"></div>
+        <div class="bar bar2"></div>
+        <div class="bar bar3"></div>
+    </div>
+
+    <div id="sidebar" class="sidebar">
+        <div class="menu-folder" id="folderTask">
+            <div class="menu-folder-header">🏷️ ラベル・タスク名の管理</div>
+            <div class="menu-folder-content">
+                
+                <div class="manage-section">
+                    <h4>① ラベル（大分類）と色を作る</h4>
+                    <div id="labelColorPalette" class="color-palette"></div>
+                    <div class="task-input-row">
+                        <input type="text" id="labelInput" placeholder="例：勉強、仕事、趣味">
+                        <button id="addLabelBtn" class="task-add-btn">作成</button>
+                    </div>
+                    <div id="registeredLabels" class="registered-tasks"></div>
+                </div>
+
+                <div class="manage-section">
+                    <h4>② ラベルの中にタスク名を入れる</h4>
+                    <div class="task-input-row">
+                        <select id="labelSelectRow"></select>
+                    </div>
+                    <div id="taskInputGroup">
+                        <input type="text" id="taskInput" placeholder="タスク名を入力">
+                        <button id="addTaskBtn" class="task-add-btn">追加</button>
+                    </div>
+                    <div id="nestedStructure" class="nested-list"></div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="menu-folder" id="folderWeek">
+            <div class="menu-folder-header">📊 週間の勉強記録</div>
+            <div class="menu-folder-content">
+                <div id="chartContainerWeek" class="chart-container"></div>
+                <div class="history-detail-area">
+                    <h3 id="selectedDayTitleWeek">選択してください</h3>
+                    <ul id="historyListWeek" class="history-list"></ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="menu-folder" id="folderMonth">
+            <div class="menu-folder-header">📆 月間の勉強記録</div>
+            <div class="menu-folder-content">
+                <div id="chartContainerMonth" class="chart-container"></div>
+                <div class="history-detail-area">
+                    <h3 id="selectedDayTitleMonth">選択してください</h3>
+                    <ul id="historyListMonth" class="history-list"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-area">
+        <h1>ぽゆたいまー</h1>
+        <div id="status">最初の集中！</div>
+        <div id="timer">01:00</div>
+        
+        <div id="controlButtons">
+            <button id="startBtn">スタート</button>
+            <button id="resetBtn">リセット</button>
+            <button id="endBreakBtn">終了</button>
+        </div>
+
+        <div id="choiceArea">
+            <p style="font-weight: bold; color: #ef4444;">時間が経ちました！どうする？</p>
+            <button id="breakBtn" class="choice-btn">休憩する</button>
+            <button id="continueBtn" class="choice-btn">継続する！</button>
+        </div>
+
+        <div id="taskSelectArea">
+            <div class="modal-content">
+                <p>今回の記録を保存しよう！</p>
+                <div class="select-layout">
+                    <select id="finishLabelDropdown"></select>
+                    <select id="finishTaskDropdown"></select>
+                    <input type="text" id="finishMemoInput" placeholder="ひと言メモ（やったこと）">
+                    <button id="saveRecordBtn">記録を確定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="record-area">
+        <h2>今日の記録</h2>
+        <ul id="recordList"></ul>
+        <div class="total-area">
+            合計勉強時間 <span id="totalStudyTime">0分00秒</span>
+        </div>
+    </div>
+
+    <script>
+        function playBeep() {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            function tone(delay) {
+                const osc = audioCtx.createOscillator();
+                osc.type = 'sine'; osc.frequency.setValueAtTime(880, audioCtx.currentTime + delay);
+                osc.connect(audioCtx.destination); osc.start(audioCtx.currentTime + delay);
+                osc.stop(audioCtx.currentTime + delay + 0.08);
+            }
+            tone(0.0); tone(0.15); tone(0.3); tone(0.6); tone(0.75); tone(0.9);
+            tone(1.9); tone(2.05); tone(2.2); tone(2.5); tone(2.65); tone(2.8);
+            tone(3.8); tone(3.95); tone(4.1); tone(4.4); tone(4.55); tone(4.7);
+        }
+
+        // ★本番用の時間設定（すべて秒数に換算）
+        const TIME_FIRST    = 1 * 60;  // 最初の集中 (1分)
+        const TIME_CHOOSING = 1 * 60;  // 自動移行カウントダウン (1分)
+        const TIME_WORK25   = 25 * 60; // 本番の集中作業 (25分)
+        const TIME_BREAK    = 5 * 60;  // 休憩時間 (5分)
+
+        let mode = 'first'; 
+        let timeLeft = TIME_FIRST; // 初期値は1分
+        let timerId = null;
+
+        let totalElapsedBeforeContinue = 0; 
+        let totalOverTimeSeconds = 0;        
+        let totalWork25Count = 0;            
+        let hasContinuedInCurrentLoop = false; 
+
+        const timerDisplay = document.getElementById('timer');
+        const statusDisplay = document.getElementById('status');
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const endBreakBtn = document.getElementById('endBreakBtn'); 
+        const choiceArea = document.getElementById('choiceArea');
+        const breakBtn = document.getElementById('breakBtn');
+        const continueBtn = document.getElementById('continueBtn');
+        const recordList = document.getElementById('recordList');
+        const totalStudyTimeDisplay = document.getElementById('totalStudyTime');
+        
+        const menuBtn = document.getElementById('menuBtn');
+        const sidebar = document.getElementById('sidebar');
+        
+        const chartContainerWeek = document.getElementById('chartContainerWeek');
+        const selectedDayTitleWeek = document.getElementById('selectedDayTitleWeek');
+        const historyListWeek = document.getElementById('historyListWeek');
+
+        const chartContainerMonth = document.getElementById('chartContainerMonth');
+        const selectedDayTitleMonth = document.getElementById('selectedDayTitleMonth');
+        const historyListMonth = document.getElementById('historyListMonth');
+
+        const labelInput = document.getElementById('labelInput');
+        const labelColorPalette = document.getElementById('labelColorPalette');
+        const addLabelBtn = document.getElementById('addLabelBtn');
+        const registeredLabels = document.getElementById('registeredLabels');
+        const labelSelectRow = document.getElementById('labelSelectRow');
+        const taskInputGroup = document.getElementById('taskInputGroup');
+        const taskInput = document.getElementById('taskInput');
+        const addTaskBtn = document.getElementById('addTaskBtn');
+        const nestedStructure = document.getElementById('nestedStructure');
+        
+        const taskSelectArea = document.getElementById('taskSelectArea');
+        const finishLabelDropdown = document.getElementById('finishLabelDropdown');
+        const finishTaskDropdown = document.getElementById('finishTaskDropdown');
+        const finishMemoInput = document.getElementById('finishMemoInput');
+        const saveRecordBtn = document.getElementById('saveRecordBtn');
+        
+        const clearAllDataBtn = document.getElementById('clearAllDataBtn');
+
+        const COLORS = [
+            { hex: "#FF6B6B", name: "レッド" },
+            { hex: "#FF9F43", name: "オレンジ" },
+            { hex: "#FFD93D", name: "イエロー" },
+            { hex: "#6BCB77", name: "グリーン" },
+            { hex: "#4D96FF", name: "ブルー" },
+            { hex: "#9B5DE5", name: "パープル" },
+            { hex: "#F15BB5", name: "ピンク" },
+            { hex: "#00F5D4", name: "ミント" },
+            { hex: "#5DADE2", name: "スカイブルー" },
+            { hex: "#AAB7B8", name: "グレー" }
+        ];
+
+        let selectedColorHex = COLORS[0].hex;
+
+        function initColorPalette() {
+            labelColorPalette.innerHTML = '';
+            COLORS.forEach((c, idx) => {
+                const circle = document.createElement('div');
+                circle.className = 'color-circle';
+                circle.style.backgroundColor = c.hex;
+                circle.title = c.name;
+                if (idx === 0) circle.classList.add('selected');
+
+                circle.addEventListener('click', () => {
+                    labelColorPalette.querySelectorAll('.color-circle').forEach(el => el.classList.remove('selected'));
+                    circle.classList.add('selected');
+                    selectedColorHex = c.hex;
+                });
+                labelColorPalette.appendChild(circle);
+            });
+        }
+        initColorPalette();
+
+        function getTargetDateObject() {
+            const now = new Date();
+            return new Date(now.getTime() - (5 * 60 * 60 * 1000));
+        }
+
+        function getTargetDateStr() {
+            const d = getTargetDateObject();
+            return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+        }
+
+        function formatSecondsToText(totalSec) {
+            const mins = Math.floor(totalSec / 60);
+            const secs = totalSec % 60;
+            return `${mins}分${secs.toString().padStart(2, '0')}秒`;
+        }
+
+        menuBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            menuBtn.classList.toggle('open');
+            if(sidebar.classList.contains('open')) {
+                drawWeekChart();
+                drawMonthChart();
+            } 
+        });
+
+        document.querySelectorAll('.menu-folder-header').forEach(header => {
+            header.addEventListener('click', () => {
+                header.parentElement.classList.toggle('active');
+            });
+        });
+
+        function getCategoryData() {
+            const data = localStorage.getItem('poyu_category_data');
+            const defaultData = { labels: ["その他"], mapping: { "その他": ["なし"] }, colors: { "その他": "#AAB7B8" } };
+            if (!data) return defaultData;
+            const parsed = JSON.parse(data);
+            if (!parsed.colors) { parsed.colors = {}; }
+            return parsed;
+        }
+
+        function saveCategoryData(data) {
+            localStorage.setItem('poyu_category_data', JSON.stringify(data));
+            renderCategorySettings();
+            loadRecords(); 
+        }
+
+        function parseLabelFromTitle(title) {
+            const match = title.match(/^\[(.*?)\]/);
+            return match ? match[1] : "その他";
+        }
+
+        function getLabelColor(labelName) {
+            const data = getCategoryData();
+            return data.colors[labelName] || "#AAB7B8";
+        }
+
+        addLabelBtn.addEventListener('click', () => {
+            const labelName = labelInput.value.trim();
+            if (!labelName || labelName === "その他") return;
+            const data = getCategoryData();
+            if (!data.labels.includes(labelName)) {
+                data.labels.push(labelName);
+                data.mapping[labelName] = ["なし"]; 
+                data.colors[labelName] = selectedColorHex;
+                saveCategoryData(data);
+            }
+            labelInput.value = '';
+        });
+
+        labelSelectRow.addEventListener('change', () => {
+            if (labelSelectRow.value !== "") {
+                taskInputGroup.style.display = 'flex';
+                taskInput.focus();
+            } else {
+                taskInputGroup.style.display = 'none';
+            }
+        });
+
+        addTaskBtn.addEventListener('click', () => {
+            const selectedLabel = labelSelectRow.value;
+            const taskName = taskInput.value.trim();
+            if (!selectedLabel || !taskName) return;
+            
+            const data = getCategoryData();
+            if (!data.mapping[selectedLabel]) { data.mapping[selectedLabel] = []; }
+            
+            if (data.mapping[selectedLabel].includes("なし")) {
+                data.mapping[selectedLabel] = data.mapping[selectedLabel].filter(t => t !== "なし");
+            }
+            
+            if (!data.mapping[selectedLabel].includes(taskName)) {
+                data.mapping[selectedLabel].push(taskName);
+                saveCategoryData(data);
+            }
+            taskInput.value = '';
+            taskInput.focus(); 
+        });
+
+        function renameLabelInGlobalLogs(oldLabel, newLabel) {
+            const logs = getGlobalLogs();
+            let changed = false;
+            for (const dateKey in logs) {
+                logs[dateKey].forEach(item => {
+                    const currentLabel = parseLabelFromTitle(item.title);
+                    if (currentLabel === oldLabel) {
+                        const taskPart = item.title.replace(/^\[.*?\]/, '');
+                        item.title = `[${newLabel}]${taskPart}`;
+                        changed = true;
+                    }
+                });
+            }
+            if (changed) {
+                localStorage.setItem('poyu_global_logs', JSON.stringify(logs));
+            }
+        }
+
+        function renderCategorySettings() {
+            const data = getCategoryData();
+            registeredLabels.innerHTML = '';
+            
+            const currentSavedRowLabel = labelSelectRow.value;
+            labelSelectRow.innerHTML = '';
+            const placeholderOpt = document.createElement('option');
+            placeholderOpt.value = "";
+            placeholderOpt.textContent = "-- ラベルを選択してください --";
+            labelSelectRow.appendChild(placeholderOpt);
+            
+            data.labels.forEach(lbl => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'label-manage-item';
+
+                const viewRow = document.createElement('div');
+                viewRow.className = 'label-view-row';
+
+                const normalView = document.createElement('div');
+                normalView.className = 'label-info-side';
+                
+                const dot = document.createElement('span');
+                dot.className = 'circle-dot';
+                dot.style.backgroundColor = getLabelColor(lbl);
+                
+                const txt = document.createElement('span');
+                txt.textContent = lbl;
+                
+                normalView.appendChild(dot);
+                normalView.appendChild(txt);
+
+                const btnSide = document.createElement('div');
+                btnSide.className = 'label-btn-side';
+
+                if (lbl !== "その他") {
+                    const editBtn = document.createElement('span');
+                    editBtn.className = 'label-edit-btn';
+                    editBtn.textContent = '編集';
+                    
+                    const delBtn = document.createElement('span');
+                    delBtn.className = 'task-delete';
+                    delBtn.textContent = '×';
+
+                    btnSide.appendChild(editBtn);
+                    btnSide.appendChild(delBtn);
+
+                    const editForm = document.createElement('div');
+                    editForm.className = 'label-edit-box';
+                    editForm.style.flexDirection = 'column';
+
+                    const inputRow = document.createElement('div');
+                    inputRow.style.display = 'flex';
+                    inputRow.style.gap = '6px';
+                    inputRow.style.width = '100%';
+
+                    const nameInp = document.createElement('input');
+                    nameInp.type = 'text';
+                    nameInp.value = lbl;
+
+                    const saveBtn = document.createElement('button');
+                    saveBtn.className = 'edit-save-btn'; saveBtn.textContent = '保存';
+                    const cancelBtn = document.createElement('button');
+                    cancelBtn.className = 'edit-cancel-btn'; cancelBtn.textContent = '×';
+
+                    inputRow.appendChild(nameInp);
+                    inputRow.appendChild(saveBtn);
+                    inputRow.appendChild(cancelBtn);
+
+                    const editPalette = document.createElement('div');
+                    editPalette.className = 'edit-color-palette';
+
+                    let currentEditColor = getLabelColor(lbl);
+                    COLORS.forEach(c => {
+                        const cCircle = document.createElement('div');
+                        cCircle.className = 'edit-color-circle';
+                        cCircle.style.backgroundColor = c.hex;
+                        if (c.hex === currentEditColor) cCircle.classList.add('selected');
+                        
+                        cCircle.addEventListener('click', () => {
+                            editPalette.querySelectorAll('.edit-color-circle').forEach(el => el.classList.remove('selected'));
+                            cCircle.classList.add('selected');
+                            currentEditColor = c.hex;
+                        });
+                        editPalette.appendChild(cCircle);
+                    });
+
+                    editForm.appendChild(inputRow);
+                    editForm.appendChild(editPalette);
+
+                    viewRow.appendChild(normalView);
+                    viewRow.appendChild(btnSide);
+                    itemDiv.appendChild(viewRow);
+                    itemDiv.appendChild(editForm);
+
+                    editBtn.addEventListener('click', () => {
+                        const isNone = editForm.style.display === 'none' || editForm.style.display === '';
+                        editForm.style.display = isNone ? 'flex' : 'none';
+                    });
+
+                    saveBtn.addEventListener('click', () => {
+                        const newName = nameInp.value.trim();
+                        if (!newName) return;
+                        
+                        let d = getCategoryData();
+                        if (newName !== lbl) {
+                            if (d.labels.includes(newName)) {
+                                alert('そのラベル名は既に存在します');
+                                return;
+                            }
+                            d.labels = d.labels.map(l => l === lbl ? newName : l);
+                            d.mapping[newName] = d.mapping[lbl] || ["なし"];
+                            delete d.mapping[lbl];
+                            renameLabelInGlobalLogs(lbl, newName);
+                        }
+                        
+                        delete d.colors[lbl];
+                        d.colors[newName] = currentEditColor;
+                        saveCategoryData(d);
+                    });
+
+                    cancelBtn.addEventListener('click', () => {
+                        editForm.style.display = 'none';
+                        nameInp.value = lbl;
+                    });
+
+                    delBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if(!confirm(`ラベル「${lbl}」を削除しますか？\n(過去の記録は「その他」に自動変更されます)`)) return;
+                        let d = getCategoryData();
+                        d.labels = d.labels.filter(l => l !== lbl);
+                        delete d.mapping[lbl];
+                        delete d.colors[lbl];
+                        renameLabelInGlobalLogs(lbl, "その他");
+                        saveCategoryData(d);
+                    });
+                } else {
+                    viewRow.appendChild(normalView);
+                    viewRow.appendChild(btnSide);
+                    itemDiv.appendChild(viewRow);
+                }
+
+                registeredLabels.appendChild(itemDiv);
+
+                const opt = document.createElement('option');
+                opt.value = lbl; opt.textContent = lbl;
+                labelSelectRow.appendChild(opt);
+            });
+
+            if (currentSavedRowLabel && data.labels.includes(currentSavedRowLabel)) {
+                labelSelectRow.value = currentSavedRowLabel;
+                taskInputGroup.style.display = 'flex';
+            }
+
+            nestedStructure.innerHTML = '';
+            for (const lbl in data.mapping) {
+                const block = document.createElement('div');
+                block.className = 'nested-item';
+                block.innerHTML = `<strong style="color:${getLabelColor(lbl)};">■ ${lbl}</strong>`;
+                
+                const ul = document.createElement('div');
+                ul.style.paddingLeft = "15px";
+                ul.style.marginBottom = "4px";
+                
+                data.mapping[lbl].forEach(tsk => {
+                    const tskSpan = document.createElement('div');
+                    tskSpan.style.display = 'flex';
+                    tskSpan.style.justifyContent = 'space-between';
+                    tskSpan.style.maxWidth = '250px';
+                    tskSpan.style.fontSize = '0.85rem';
+                    tskSpan.style.padding = '2px 0';
+                    
+                    if (tsk === "なし") {
+                        tskSpan.innerHTML = `<span style="color:#a0aec0;">(タスク未登録)</span>`;
+                    } else {
+                        tskSpan.innerHTML = `<span>・ ${tsk}</span>`;
+                        const delT = document.createElement('span');
+                        delT.className = 'task-delete'; delT.textContent = '消去';
+                        delT.addEventListener('click', () => {
+                            let d = getCategoryData();
+                            d.mapping[lbl] = d.mapping[lbl].filter(t => t !== tsk);
+                            if (d.mapping[lbl].length === 0) { d.mapping[lbl].push("なし"); }
+                            saveCategoryData(d);
+                        });
+                        tskSpan.appendChild(delT);
+                    }
+                    ul.appendChild(tskSpan);
+                });
+                block.appendChild(ul);
+                nestedStructure.appendChild(block);
+            }
+            setupFinishDropdowns();
+        }
+
+        function setupFinishDropdowns() {
+            const data = getCategoryData();
+            const currentSavedFinishLabel = finishLabelDropdown.value;
+
+            finishLabelDropdown.innerHTML = '';
+            data.labels.forEach(lbl => {
+                const opt = document.createElement('option');
+                opt.value = lbl; opt.textContent = lbl;
+                finishLabelDropdown.appendChild(opt);
+            });
+            finishLabelDropdown.onchange = () => {
+                const currentLabel = finishLabelDropdown.value;
+                finishTaskDropdown.innerHTML = '';
+                const tasks = data.mapping[currentLabel] || ["なし"];
+                tasks.forEach(tsk => {
+                    const opt = document.createElement('option');
+                    opt.value = tsk; opt.textContent = tsk;
+                    finishTaskDropdown.appendChild(opt);
+                });
+            };
+            if (currentSavedFinishLabel && data.labels.includes(currentSavedFinishLabel)) {
+                finishLabelDropdown.value = currentSavedFinishLabel;
+            }
+            finishLabelDropdown.onchange();
+        }
+
+        function checkAndResetDailyRecords() {
+            const currentTargetDate = getTargetDateStr();
+            const savedDate = localStorage.getItem('poyu_timer_date');
+            if (savedDate !== currentTargetDate) {
+                localStorage.setItem('poyu_timer_date', currentTargetDate);
+                recordList.innerHTML = '';
+                totalStudyTimeDisplay.textContent = "0分00秒";
+            }
+        }
+
+        function getGlobalLogs() {
+            const logs = localStorage.getItem('poyu_global_logs');
+            return logs ? JSON.parse(logs) : {};
+        }
+
+        function saveToGlobalLogs(title, timeString, rawSec, memo) {
+            const dateStr = getTargetDateStr();
+            const logs = getGlobalLogs();
+            if (!logs[dateStr]) { logs[dateStr] = []; }
+            logs[dateStr].push({ title: title, time: timeString, rawSeconds: rawSec, memo: memo || "" });
+            localStorage.setItem('poyu_global_logs', JSON.stringify(logs));
+        }
+
+        function updateLogItemCategory(dateStr, index, newLabel, newTask) {
+            const logs = getGlobalLogs();
+            if (logs[dateStr] && logs[dateStr][index]) {
+                const formattedTask = (newTask === "なし" || !newTask) ? "" : ` ${newTask}`;
+                logs[dateStr][index].title = `[${newLabel}]${formattedTask}`;
+                localStorage.setItem('poyu_global_logs', JSON.stringify(logs));
+                loadRecords(); 
+            }
+        }
+
+        function createRecordLiElement(rec, index, dateStr) {
+            const li = document.createElement('li');
+            li.className = 'record-item';
+            
+            const currentLabel = parseLabelFromTitle(rec.title);
+            li.style.borderLeft = `4px solid ${getLabelColor(currentLabel)}`;
+
+            const row = document.createElement('div');
+            row.className = 'record-item-row';
+
+            const titleSpan = document.createElement('span');
+            titleSpan.className = 'record-title-text';
+            
+            if (rec.memo) {
+                titleSpan.innerHTML = `${rec.title} <span style="color:#718096; font-size:0.85rem; font-weight:normal;">(${rec.memo})</span>`;
+            } else {
+                titleSpan.textContent = rec.title;
+            }
+
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'time-span';
+            timeSpan.style.color = getLabelColor(currentLabel);
+            timeSpan.textContent = rec.time;
+
+            const editBtn = document.createElement('span');
+            editBtn.className = 'edit-trigger-btn';
+            editBtn.textContent = '✏️';
+
+            row.appendChild(titleSpan);
+            row.appendChild(timeSpan);
+            row.appendChild(editBtn);
+            li.appendChild(row);
+
+            const editBox = document.createElement('div');
+            editBox.className = 'edit-inline-box';
+            editBox.style.display = 'none';
+
+            const lblSelect = document.createElement('select');
+            const tskSelect = document.createElement('select');
+            const saveBtn = document.createElement('button');
+            saveBtn.className = 'edit-save-btn'; saveBtn.textContent = '保存';
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'edit-cancel-btn'; cancelBtn.textContent = '×';
+
+            editBox.appendChild(lblSelect);
+            editBox.appendChild(tskSelect);
+            editBox.appendChild(saveBtn);
+            editBox.appendChild(cancelBtn);
+            li.appendChild(editBox);
+
+            editBtn.addEventListener('click', () => {
+                const data = getCategoryData();
+                lblSelect.innerHTML = '';
+                data.labels.forEach(l => {
+                    const opt = document.createElement('option');
+                    opt.value = l; opt.textContent = l;
+                    lblSelect.appendChild(opt);
+                });
+
+                lblSelect.onchange = () => {
+                    tskSelect.innerHTML = '';
+                    const tasks = data.mapping[lblSelect.value] || ["なし"];
+                    tasks.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t; opt.textContent = t;
+                        tskSelect.appendChild(opt);
+                    });
+                };
+
+                let labelSeed = "その他";
+                let taskSeed = "なし";
+                const match = rec.title.match(/^\[(.*?)\]\s*(.*)$/);
+                if (match) {
+                    labelSeed = match[1];
+                    taskSeed = match[2] || "なし";
+                }
+
+                if (data.labels.includes(labelSeed)) { lblSelect.value = labelSeed; }
+                lblSelect.onchange();
+                if ((data.mapping[lblSelect.value] || []).includes(taskSeed)) { tskSelect.value = taskSeed; }
+
+                row.style.display = 'none';
+                editBox.style.display = 'flex';
+            });
+
+            saveBtn.addEventListener('click', () => {
+                updateLogItemCategory(dateStr, index, lblSelect.value, tskSelect.value);
+            });
+
+            cancelBtn.addEventListener('click', () => {
+                editBox.style.display = 'none';
+                row.style.display = 'flex';
+            });
+
+            return li;
+        }
+
+        function buildStackedBar(daySets, maxSeconds, wrapper) {
+            const barStack = document.createElement('div');
+            barStack.className = 'chart-bar-stack';
+
+            const totalSec = daySets.reduce((sum, item) => sum + item.rawSeconds, 0);
+            if (totalSec === 0) {
+                barStack.style.height = '2%';
+                wrapper.appendChild(barStack);
+                return;
+            }
+
+            const heightPercent = (totalSec / maxSeconds) * 85;
+            barStack.style.height = `${Math.max(heightPercent, 2)}%`;
+
+            const labelSecondsMap = {};
+            daySets.forEach(item => {
+                const lbl = parseLabelFromTitle(item.title);
+                labelSecondsMap[lbl] = (labelSecondsMap[lbl] || 0) + item.rawSeconds;
+            });
+
+            for (const lbl in labelSecondsMap) {
+                const segmentSec = labelSecondsMap[lbl];
+                const segmentPercent = (segmentSec / totalSec) * 100;
+
+                const segment = document.createElement('div');
+                segment.className = 'chart-bar-segment';
+                segment.style.height = `${segmentPercent}%`;
+                segment.style.backgroundColor = getLabelColor(lbl);
+                segment.title = `${lbl}: ${formatSecondsToText(segmentSec)}`;
+                barStack.appendChild(segment);
+            }
+
+            wrapper.appendChild(barStack);
+        }
+
+        function drawWeekChart() {
+            chartContainerWeek.innerHTML = '';
+            const logs = getGlobalLogs();
+            const baseDate = getTargetDateObject();
+            const dateList = [];
+
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date(baseDate.getTime() - (i * 24 * 60 * 60 * 1000));
+                dateList.push(`${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`);
+            }
+
+            let maxSeconds = 1;
+            dateList.forEach(dateStr => {
+                const daySets = logs[dateStr] || [];
+                const totalSec = daySets.reduce((sum, item) => sum + item.rawSeconds, 0);
+                if (totalSec > maxSeconds) { maxSeconds = totalSec; }
+            });
+
+            dateList.forEach((dateStr) => {
+                const daySets = logs[dateStr] || [];
+                const wrapper = document.createElement('div');
+                wrapper.className = 'chart-bar-wrapper';
+                if (dateStr === getTargetDateStr()) { wrapper.classList.add('active'); }
+
+                buildStackedBar(daySets, maxSeconds, wrapper);
+
+                const label = document.createElement('div');
+                label.className = 'chart-label';
+                label.textContent = dateStr.substring(5); 
+
+                wrapper.appendChild(label);
+                
+                wrapper.addEventListener('click', () => {
+                    chartContainerWeek.querySelectorAll('.chart-bar-wrapper').forEach(w => w.classList.remove('active'));
+                    wrapper.classList.add('active');
+                    showDayDetail(dateStr);
+                });
+                chartContainerWeek.appendChild(wrapper);
+            });
+
+            const activeWrapper = chartContainerWeek.querySelector('.chart-bar-wrapper.active');
+            if (activeWrapper) {
+                const curLabelText = activeWrapper.querySelector('.chart-label').textContent;
+                const foundDate = dateList.find(d => d.endsWith(curLabelText));
+                showDayDetail(foundDate || getTargetDateStr());
+            } else {
+                showDayDetail(getTargetDateStr());
+            }
+        }
+
+        function drawMonthChart() {
+            chartContainerMonth.innerHTML = '';
+            const logs = getGlobalLogs();
+            const baseDate = getTargetDateObject();
+            const monthList = []; 
+
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(baseDate.getFullYear(), baseDate.getMonth() - i, 1);
+                const y = d.getFullYear(); const m = d.getMonth() + 1;
+                monthList.push({ year: y, month: m, label: `${m}月`, key: `${y}-${m.toString().padStart(2, '0')}` });
+            }
+
+            const monthlyDataSets = monthList.map(mInfo => {
+                let mergedSets = [];
+                for (const dateKey in logs) {
+                    if (dateKey.startsWith(mInfo.key)) {
+                        mergedSets = mergedSets.concat(logs[dateKey] || []);
+                    }
+                }
+                return mergedSets;
+            });
+
+            let maxMonthSeconds = 1;
+            monthlyDataSets.forEach(sets => {
+                const sec = sets.reduce((sum, item) => sum + item.rawSeconds, 0);
+                if (sec > maxMonthSeconds) maxMonthSeconds = sec;
+            });
+
+            const currentMonthKey = `${baseDate.getFullYear()}-${(baseDate.getMonth() + 1).toString().padStart(2, '0')}`;
+
+            monthList.forEach((mInfo, idx) => {
+                const daySets = monthlyDataSets[idx];
+                const wrapper = document.createElement('div');
+                wrapper.className = 'chart-bar-wrapper';
+                if (mInfo.key === currentMonthKey) { wrapper.classList.add('active'); }
+
+                buildStackedBar(daySets, maxMonthSeconds, wrapper);
+
+                const label = document.createElement('div');
+                label.className = 'chart-label';
+                label.textContent = mInfo.label;
+
+                wrapper.appendChild(label);
+
+                wrapper.addEventListener('click', () => {
+                    chartContainerMonth.querySelectorAll('.chart-bar-wrapper').forEach(w => w.classList.remove('active'));
+                    wrapper.classList.add('active');
+                    const currentTotal = daySets.reduce((sum, item) => sum + item.rawSeconds, 0);
+                    showMonthDetail(mInfo.key, mInfo.year, mInfo.month, currentTotal);
+                });
+                chartContainerMonth.appendChild(wrapper);
+            });
+
+            const curMIdx = monthList.findIndex(m => m.key === currentMonthKey);
+            const initialTotal = monthlyDataSets[curMIdx].reduce((sum, item) => sum + item.rawSeconds, 0);
+            showMonthDetail(currentMonthKey, baseDate.getFullYear(), baseDate.getMonth() + 1, initialTotal);
+        }
+
+        function showDayDetail(dateStr) {
+            const logs = getGlobalLogs();
+            const daySets = logs[dateStr] || [];
+            const totalSec = daySets.reduce((sum, item) => sum + item.rawSeconds, 0);
+            
+            selectedDayTitleWeek.innerHTML = `${dateStr.replace(/-/g, '/')}<br><span style="font-size:0.85rem; color:#7bc0e3;">総時間: ${formatSecondsToText(totalSec)}</span>`;
+            historyListWeek.innerHTML = '';
+            if (daySets.length === 0) {
+                historyListWeek.innerHTML = '<li class="record-item" style="color:#94a3b8;">この日の記録はありません</li>';
+                return;
+            }
+            daySets.forEach((set, index) => {
+                const li = createRecordLiElement(set, index, dateStr);
+                historyListWeek.appendChild(li);
+            });
+        }
+
+        function showMonthDetail(monthKey, year, month, totalSec) {
+            const logs = getGlobalLogs();
+            selectedDayTitleMonth.innerHTML = `${year}/${month.toString().padStart(2, '0')}<br><span style="font-size:0.85rem; color:#7bc0e3;">月間総時間: ${formatSecondsToText(totalSec)}</span>`;
+            historyListMonth.innerHTML = '';
+
+            const dayMap = {};
+            for (const dateKey in logs) {
+                if (dateKey.startsWith(monthKey)) {
+                    const dayTotalSec = (logs[dateKey] || []).reduce((sum, item) => sum + item.rawSeconds, 0);
+                    if (dayTotalSec > 0) { dayMap[dateKey] = dayTotalSec; }
+                }
+            }
+
+            const sortedDates = Object.keys(dayMap).sort();
+            if (sortedDates.length === 0) {
+                historyListMonth.innerHTML = '<li class="record-item" style="color:#94a3b8;">この月の記録はありません</li>';
+                return;
+            }
+            sortedDates.forEach(dateKey => {
+                const li = document.createElement('li');
+                li.className = 'record-item';
+                li.style.flexDirection = 'row';
+                li.style.justifyContent = 'space-between';
+                li.style.borderLeft = "4px solid #cbd5e1";
+                li.innerHTML = `${dateKey.replace(/-/g, '/')} <span class="time-span" style="color:#4a5568;">${formatSecondsToText(dayMap[dateKey])}</span>`;
+                historyListMonth.appendChild(li);
+            });
+        }
+
+        function loadRecords() {
+            checkAndResetDailyRecords();
+            const currentTargetDate = getTargetDateStr();
+            const logs = getGlobalLogs();
+            const todaySets = logs[currentTargetDate] || [];
+            
+            recordList.innerHTML = '';
+            todaySets.forEach((rec, index) => {
+                const li = createRecordLiElement(rec, index, currentTargetDate);
+                recordList.appendChild(li);
+            });
+
+            const todayTotal = todaySets.reduce((sum, item) => sum + item.rawSeconds, 0);
+            totalStudyTimeDisplay.textContent = formatSecondsToText(todayTotal);
+            
+            drawWeekChart();
+            drawMonthChart();
+        }
+
+        function updateDisplay() {
+            if (mode === 'work25' && timeLeft < 0) {
+                const overTime = Math.abs(timeLeft); 
+                if (overTime <= 5) { timerDisplay.textContent = "25:00"; } 
+                else {
+                    const totalSeconds = (25 * 60) + overTime; 
+                    const minutes = Math.floor(totalSeconds / 60); const seconds = totalSeconds % 60;
+                    timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }
+            } else {
+                const minutes = Math.floor(timeLeft / 60); const seconds = timeLeft % 60;
+                timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+        }
+
+        function startTimer() {
+            timerId = setInterval(() => {
+                if (mode === 'first' || mode === 'choosing') { totalElapsedBeforeContinue++; }
+                if (mode === 'work25' && timeLeft < 0) { totalOverTimeSeconds++; }
+                timeLeft--;
+
+                if (mode === 'work25') {
+                    if (timeLeft === 0) {
+                        playBeep();
+                        statusDisplay.textContent = "集中終了！オーバータイム突入";
+                        timerDisplay.style.color = "#ff8e75"; 
+                        totalWork25Count++; 
+                        
+                        // ★バグ修正：オーバータイム突入時にも休憩・継続ボタン（選択エリア）を出す
+                        choiceArea.style.display = 'block';
+                        startBtn.disabled = true; 
+                        startBtn.textContent = 'カウント中';
+                    }
+                    updateDisplay();
+                } else {
+                    updateDisplay();
+                    if (mode === 'first' && timeLeft <= 0) {
+                        // ★最初の1分終了時に確実に選択画面へ移行
+                        mode = 'choosing'; 
+                        timeLeft = TIME_CHOOSING; 
+                        statusDisplay.textContent = "どっちにする？ (自動継続まであと少し)";
+                        timerDisplay.style.color = "#ef4444"; 
+                        choiceArea.style.display = 'block'; 
+                    } 
+                    else if (mode === 'choosing' && timeLeft <= 0) { goToContinue(); }
+                    else if (mode === 'break' && timeLeft <= 0) { playBeep(); goToFirstModeAutoStart(); }
+                }
+            }, 1000);
+            if (mode !== 'choosing') { startBtn.textContent = 'カウント中'; startBtn.disabled = true; }
+        }
+
+        function goToFirstModeAutoStart() {
+            mode = 'first'; timeLeft = TIME_FIRST; 
+            statusDisplay.textContent = "最初の集中！";
+            timerDisplay.style.color = "#7bc0e3"; choiceArea.style.display = 'none'; endBreakBtn.style.display = 'none'; 
+            startBtn.classList.remove('over-break'); startBtn.textContent = 'カウント中'; startBtn.disabled = true;
+            hasContinuedInCurrentLoop = false; updateDisplay();
+        }
+
+        // ★バグ修正：リセット時にタイマーを完全に初期化して最初の集中（1分）に戻す
+        function stopAndBackToFirst() {
+            if (timerId !== null) {
+                clearInterval(timerId); 
+                timerId = null;
+            }
+            mode = 'first'; 
+            timeLeft = TIME_FIRST; // 1分にリセット
+            statusDisplay.textContent = "最初の集中！";
+            timerDisplay.style.color = "#7bc0e3"; 
+            choiceArea.style.display = 'none'; 
+            endBreakBtn.style.display = 'none'; 
+            taskSelectArea.style.display = 'none'; 
+            startBtn.classList.remove('over-break'); 
+            startBtn.disabled = false; 
+            startBtn.textContent = 'スタート';
+            totalElapsedBeforeContinue = 0; 
+            totalOverTimeSeconds = 0; 
+            totalWork25Count = 0; 
+            hasContinuedInCurrentLoop = false; 
+            updateDisplay(); // 画面表示を「01:00」に更新
+        }
+
+        function goToContinue() {
+            mode = 'work25'; timeLeft = TIME_WORK25; 
+            statusDisplay.textContent = "作業中！(25分集中)";
+            timerDisplay.style.color = "#7bc0e3"; choiceArea.style.display = 'none'; endBreakBtn.style.display = 'none'; 
+            hasContinuedInCurrentLoop = true; startBtn.classList.remove('over-break'); startBtn.textContent = 'カウント中'; startBtn.disabled = true;
+            updateDisplay();
+        }
+
+        function goToBreak() {
+            mode = 'break'; timeLeft = TIME_BREAK; 
+            statusDisplay.textContent = "休憩中！(5分)";
+            timerDisplay.style.color = "#57c7a3"; choiceArea.style.display = 'none';
+            if (totalWork25Count > 0) { endBreakBtn.style.display = 'inline-block'; }
+            startBtn.classList.remove('over-break'); startBtn.textContent = 'カウント中'; startBtn.disabled = true;
+            updateDisplay();
+        }
+
+        startBtn.addEventListener('click', () => {
+            if (startBtn.classList.contains('over-break')) { goToBreak(); } else { if (timerId === null) { startTimer(); } }
+        });
+        resetBtn.addEventListener('click', stopAndBackToFirst);
+
+        endBreakBtn.addEventListener('click', () => {
+            if (timerId !== null) {
+                clearInterval(timerId);
+                timerId = null;
+            }
+            setupFinishDropdowns(); 
+            taskSelectArea.style.display = 'flex'; 
+            endBreakBtn.style.display = 'none';
+        });
+
+        saveRecordBtn.addEventListener('click', () => {
+            playBeep(); 
+            checkAndResetDailyRecords();
+
+            const totalSeconds = totalElapsedBeforeContinue + (totalWork25Count * TIME_WORK25) + totalOverTimeSeconds;
+            const timeString = formatSecondsToText(totalSeconds);
+            
+            const selectedLabel = finishLabelDropdown.value;
+            let selectedTask = finishTaskDropdown.value;
+            if (selectedTask === "なし") { selectedTask = ""; }
+
+            const displayTitle = selectedTask ? `[${selectedLabel}] ${selectedTask}` : `[${selectedLabel}]`;
+            
+            const memoValue = finishMemoInput.value.trim();
+            const savedLabel = finishLabelDropdown.value;
+
+            saveToGlobalLogs(displayTitle, timeString, totalSeconds, memoValue);
+            loadRecords();
+
+            stopAndBackToFirst(); 
+
+            finishLabelDropdown.value = savedLabel;
+            finishLabelDropdown.dispatchEvent(new Event('change'));
+            
+            finishMemoInput.value = ""; 
+        });
+
+        breakBtn.addEventListener('click', goToBreak);
+        continueBtn.addEventListener('click', goToContinue);
+
+        clearAllDataBtn.addEventListener('click', () => {
+            if (!confirm("本当にすべてのデータを削除しますか？\n登録したラベルやタスク名、これまでの勉強記録ログがすべて消去され、元に戻せなくなります。")) return;
+            if (!confirm("【最終確認】本当に初期化してよろしいですか？（蓄積されたデータがすべてまっさらになります）")) return;
+
+            localStorage.removeItem('poyu_category_data');
+            localStorage.removeItem('poyu_global_logs');
+            localStorage.removeItem('poyu_timer_date');
+
+            alert("すべてのデータをリセットしました。アプリを再読み込みします。");
+            location.reload(); 
+        });
+
+        // 画面の初期化
+        statusDisplay.textContent = "最初の集中！";
+        renderCategorySettings();
+        loadRecords();
+        updateDisplay();
+    </script>
+</body>
+</html>
