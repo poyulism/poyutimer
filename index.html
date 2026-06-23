@@ -73,11 +73,16 @@
             transition: 0.3s;
             border-radius: 2px;
         }
-        #menuBtn.open .bar1 { transform: rotate(-45deg) translate(-5px, 6px); }
-        #menuBtn.open .bar2 { opacity: 0; }
-        #menuBtn.open .bar3 { transform: rotate(45deg) translate(-5px, -6px); }
-
-
+     /* メニューボタンが開いた時のスタイル */
+#menuBtn.open .bar1 { 
+    transform: rotate(-45deg) translate(-7px, 7px); /* 少しだけ外側にずらして隙間を埋める */
+}
+#menuBtn.open .bar2 { 
+    opacity: 0; /* ここで真ん中の線を消す */
+}
+#menuBtn.open .bar3 { 
+    transform: rotate(45deg) translate(-7px, -7px); /* 上記と対称にずらす */
+}
 
     
        
