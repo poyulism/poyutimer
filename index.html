@@ -290,21 +290,11 @@
 
         /* 棒グラフのコンテナ */
         .chart-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            height: 160px;
-            padding: 10px 15px;
-            background: #f8fafc;
-            border-radius: 15px;
-            border-bottom: 2px solid #e2e8f0;
             width: 100%;
-    max-width: 100%;
-    overflow-x: auto;       /* はみ出したらスクロールさせる */
-            padding-right: 20px;    /* 右端の見切れ防止用 */
-            box-sizing: border-box;
+    overflow-x: auto;       /* 横スクロールを許可 */
     white-space: nowrap;    /* 中身を折り返さない */
-            padding-bottom: 10px;
+    padding-bottom: 10px;
+    box-sizing: border-box;
             
         }
             /* グラフがcanvasの場合はこれが必要です */
