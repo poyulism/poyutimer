@@ -300,8 +300,17 @@
             border-bottom: 2px solid #e2e8f0;
             width: 100%;
     max-width: 100%;
-    overflow: hidden;
+    overflow-x: auto;       /* はみ出したらスクロールさせる */
+            padding-right: 20px;    /* 右端の見切れ防止用 */
+            box-sizing: border-box;
+    white-space: nowrap;    /* 中身を折り返さない */
+            
         }
+            /* フィルター（セレクトボックス）の余白 */
+.filter-area {
+    margin: 10px 0;
+    padding: 0 10px;
+}
         .chart-bar-wrapper {
             display: flex;
             flex-direction: column;
@@ -550,6 +559,12 @@
         <div class="menu-folder" id="folderWeek">
             <div class="menu-folder-header">📊 週間の勉強記録</div>
             <div class="menu-folder-content">
+                <div class="filter-area">
+            <input type="week" id="weekPicker">
+        </div>
+        <div class="chart-container">
+            <div id="chartContainerWeek" style="min-width: 500px;"></div>
+        </div>
                 <div id="chartContainerWeek" class="chart-container"></div>
                 <div class="history-detail-area">
                     <h3 id="selectedDayTitleWeek">選択してください</h3>
@@ -561,6 +576,12 @@
         <div class="menu-folder" id="folderMonth">
             <div class="menu-folder-header">📆 月間の勉強記録</div>
             <div class="menu-folder-content">
+                <div class="filter-area">
+            <select id="yearSelect"></select>
+        </div>
+        <div class="chart-container">
+            <div id="chartContainerMonth" style="min-width: 600px;"></div>
+        </div>
                 <div id="chartContainerMonth" class="chart-container"></div>
                 <div class="history-detail-area">
                     <h3 id="selectedDayTitleMonth">選択してください</h3>
@@ -757,6 +778,28 @@ menuBtn.addEventListener('click', () => {
         function saveCategoryData(data) {
             localStorage.setItem('poyu_category_data', JSON.stringify(data));
             renderCategorySettings();
+            // 1. 西暦のセレクトボックスを生成
+const yearSelect = document.getElementById('yearSelect');
+if (yearSelect) {
+    const currentYear = new Date().getFullYear();
+    for (let i = currentYear - 2; i <= currentYear + 1; i++) {
+        let opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = i + "年";
+        if (i === currentYear) opt.selected = true; // 今年を初期選択
+        yearSelect.appendChild(opt);
+    }
+}
+
+// 2. 週選択の初期設定
+const weekPicker = document.getElementById('weekPicker');
+if (weekPicker) {
+    // 今日の日付から週の値をセット
+    const now = new Date();
+    const year = now.getFullYear();
+    const week = Math.ceil((((now - new Date(year, 0, 1)) / 86400000) + now.getDay() + 1) / 7);
+    weekPicker.value = `${year}-W${week.toString().padStart(2, '0')}`;
+}
             loadRecords(); 
         }
 
