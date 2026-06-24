@@ -1380,8 +1380,9 @@ if (weekPicker) {
             }
         }
 function startTimer() {
-            lastTickTime = Date.now(); // スタートした瞬間の時刻を記録
-            
+            if (!lastTickTime) {
+                lastTickTime = Date.now();
+            }            
             timerId = setInterval(() => {
                 const now = Date.now();
                 // 前回チェックした時から、何秒経過したかを計算（バックグラウンド対策）
@@ -1419,8 +1420,8 @@ function startTimer() {
                                 choiceArea.style.display = 'block'; 
                                 continueBtn.style.display = 'inline-block'; // ★最初の1分終了時は「継続」ボタンを出す
                             } 
-                            else if (mode === 'choosing' && timeLeft <= 0) { goToContinue(); }
-                            else if (mode === 'break' && timeLeft <= 0) { playBeep(); goToFirstModeAutoStart(); }
+                           else if (mode === 'choosing' && timeLeft <= 0) { clearTimerState(); goToContinue(); break; }
+                            else if (mode === 'break' && timeLeft <= 0) { clearTimerState(); playBeep(); goToFirstModeAutoStart(); break; }
                         }
                     }
                     saveTimerState();
@@ -1438,6 +1439,7 @@ function startTimer() {
             if (timerId !== null) {
                 clearInterval(timerId); 
                 timerId = null;
+                lastTickTime = null; // ★これを追加！
                 saveTimerState();
             }
             mode = 'first'; 
@@ -1488,6 +1490,7 @@ function startTimer() {
             if (timerId !== null) {
                 clearInterval(timerId);
                 timerId = null;
+                lastTickTime = null; // ★これを追加！
             }
             setupFinishDropdowns(); 
             taskSelectArea.style.display = 'flex'; 
