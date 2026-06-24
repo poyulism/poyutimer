@@ -511,6 +511,13 @@ canvas {
         .record-item span.time-span { font-weight: bold; color: #57c7a3; white-space: nowrap; margin-right: 8px; }
         .edit-trigger-btn { color: #7bc0e3; cursor: pointer; font-size: 0.9rem; user-select: none; }
         .edit-trigger-btn:hover { color: #64b2da; }
+
+        /* ⬇️ ここから追加：削除ボタンのスタイル */
+        .delete-trigger-btn { color: #ef4444; cursor: pointer; font-size: 0.9rem; user-select: none; margin-left: 12px; }
+        .delete-trigger-btn:hover { color: #dc2626; }
+        .action-btn-group { display: flex; align-items: center; }
+        /* ⬆️ ここまで追加 */
+
         .total-area { margin-top: 15px; padding-top: 15px; border-top: 2px dashed #e1e8ed; font-size: 1.05rem; font-weight: bold; color: #4a5568; display: flex; justify-content: space-between; align-items: center; }
         #totalStudyTime { color: #7bc0e3; font-size: 1.2rem; }
     </style>
@@ -1168,13 +1175,24 @@ if (weekPicker) {
             timeSpan.style.color = getLabelColor(currentLabel);
             timeSpan.textContent = rec.time;
 
+            const actionGroup = document.createElement('div');
+            actionGroup.className = 'action-btn-group';
+
             const editBtn = document.createElement('span');
             editBtn.className = 'edit-trigger-btn';
             editBtn.textContent = '✏️';
 
+            // ★追加：削除ボタンを作成
+            const deleteBtn = document.createElement('span');
+            deleteBtn.className = 'delete-trigger-btn';
+            deleteBtn.textContent = '🗑️';
+
+            actionGroup.appendChild(editBtn);
+            actionGroup.appendChild(deleteBtn);
+
             row.appendChild(titleSpan);
             row.appendChild(timeSpan);
-            row.appendChild(editBtn);
+            row.appendChild(actionGroup); // editBtnの代わりにグループを追加
             li.appendChild(row);
 
             const editBox = document.createElement('div');
@@ -1237,7 +1255,24 @@ if (weekPicker) {
                 editBox.style.display = 'none';
                 row.style.display = 'flex';
             });
-
+            deleteBtn.addEventListener('click', () => {
+                if (confirm(`この記録（${rec.title} - ${rec.time}）を本当に削除しますか？\n※元に戻せません`)) {
+                    const logs = getGlobalLogs();
+                    if (logs[dateStr] && logs[dateStr][index]) {
+                        logs[dateStr].splice(index, 1); // 配列から該当の記録を1つ削除
+                        
+                        if (logs[dateStr].length === 0) {
+                            delete logs[dateStr]; // もし0件になったら日付ごと綺麗に消す
+                        }
+                        
+                        localStorage.setItem('poyu_global_logs', JSON.stringify(logs));
+                        
+                        // ★タイマー稼働中であっても消えないように状態を保存してから、画面をリロードしてグラフを最新にする
+                        saveTimerState();
+                        location.reload(); 
+                    }
+                }
+            });
             return li;
         }
 
