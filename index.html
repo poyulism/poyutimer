@@ -678,6 +678,7 @@ canvas {
         const TIME_CHOOSING = 1 * 60;  // 自動移行カウントダウン (1分)
         const TIME_WORK25   = 25 * 60; // 本番の集中作業 (25分)
         const TIME_BREAK    = 5 * 60;  // 休憩時間 (5分)
+        const TIME_SHORT_BREAK = 1 * 60; // ★追加：最初の1分後の短い休憩 (1分)
 
         let mode = 'first'; 
         let timeLeft = TIME_FIRST; // 初期値は1分
@@ -1455,8 +1456,8 @@ function startTimer() {
                                 choiceArea.style.display = 'block'; 
                                 continueBtn.style.display = 'inline-block'; // ★最初の1分終了時は「継続」ボタンを出す
                             } 
-                           else if (mode === 'choosing' && timeLeft <= 0) { clearTimerState(); goToContinue(); break; }
-                            else if (mode === 'break' && timeLeft <= 0) { clearTimerState(); playBeep(); goToFirstModeAutoStart(); break; }
+                           else if (mode === 'choosing' && timeLeft <= 0) { clearTimerState(); goToContinue(); return; }
+                            else if (mode === 'break' && timeLeft <= 0) { clearTimerState(); playBeep(); goToFirstModeAutoStart(); return; }
                         }
                     }
                     saveTimerState();
@@ -1494,23 +1495,67 @@ function startTimer() {
             updateDisplay(); // 画面表示を「01:00」に更新
         }
 
-        function goToContinue() {
-            mode = 'work25'; timeLeft = TIME_WORK25; 
+       function goToContinue() {
+            if (mode === 'work25') return; // ★追加：ダブルタップ防止
+            mode = 'work25';
+            timeLeft = TIME_WORK25; 
             statusDisplay.textContent = "作業中！(25分集中)";
-            timerDisplay.style.color = "#7bc0e3"; choiceArea.style.display = 'none'; endBreakBtn.style.display = 'none'; 
-            hasContinuedInCurrentLoop = true; startBtn.classList.remove('over-break'); startBtn.textContent = 'カウント中'; startBtn.disabled = true;
+            timerDisplay.style.color = "#7bc0e3"; 
+            choiceArea.style.display = 'none'; 
+            endBreakBtn.style.display = 'none'; 
+            hasContinuedInCurrentLoop = true; 
+            startBtn.classList.remove('over-break');
+            startBtn.textContent = 'カウント中'; 
+            startBtn.disabled = true;
             updateDisplay();
         }
 
         function goToBreak() {
-            mode = 'break'; timeLeft = TIME_BREAK; 
-            statusDisplay.textContent = "休憩中！(5分)";
-            timerDisplay.style.color = "#57c7a3"; choiceArea.style.display = 'none';
+            if (mode === 'break') return; // ★追加：すでに休憩モードに入っている場合は、連続タップを無視する（ダブルタップ防止）
+
+            // 「どの画面から休憩ボタンを押したか」で休憩時間を決める
+            if (mode === 'choosing' || mode === 'first') {
+                // 最初の1分（どっちにする？の選択中）から休憩を押した場合
+                timeLeft = TIME_SHORT_BREAK; // 1分
+                statusDisplay.textContent = "休憩中！(1分)";
+            } else {
+                // 25分集中（オーバータイム中）から休憩を押した場合
+                timeLeft = TIME_BREAK; // 5分
+                statusDisplay.textContent = "休憩中！(5分)";
+            }
+            
+            mode = 'break'; // 判定が終わってから、タイマーを休憩モードに切り替える
+            
+            timerDisplay.style.color = "#57c7a3"; 
+            choiceArea.style.display = 'none';
             if (totalWork25Count > 0) { endBreakBtn.style.display = 'inline-block'; }
-            startBtn.classList.remove('over-break'); startBtn.textContent = 'カウント中'; startBtn.disabled = true;
+            startBtn.classList.remove('over-break'); 
+            startBtn.textContent = 'カウント中'; 
+            startBtn.disabled = true;
             updateDisplay();
         }
 
+            // ★追加：休憩終了時に自動で次のセットを開始する処理
+        function goToFirstModeAutoStart() {
+            mode = 'first'; 
+            timeLeft = TIME_FIRST; 
+            statusDisplay.textContent = "最初の集中！";
+            timerDisplay.style.color = "#7bc0e3"; 
+            choiceArea.style.display = 'none'; 
+            endBreakBtn.style.display = 'none'; 
+            taskSelectArea.style.display = 'none'; 
+            startBtn.classList.remove('over-break'); 
+            startBtn.disabled = true; // 自動でカウント中になるため押せないようにする
+            startBtn.textContent = 'カウント中';
+            totalElapsedBeforeContinue = 0; 
+            totalOverTimeSeconds = 0; 
+            hasContinuedInCurrentLoop = false; 
+            
+            // すでに裏でタイマーは動いているので、表示を更新して状態を保存するだけ
+            updateDisplay();
+            saveTimerState();
+        }
+           
         startBtn.addEventListener('click', () => {
             unlockAudio(); // ★追加: ボタンを押した瞬間に音のロックを解除
             if (startBtn.classList.contains('over-break')) { goToBreak(); } else { if (timerId === null) { startTimer(); } }
