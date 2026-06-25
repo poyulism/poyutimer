@@ -669,6 +669,15 @@ canvas {
         function playBeep() {
             if (!audioCtx) return;
             if (audioCtx.state === 'suspended') audioCtx.resume();
+            const bgm = document.getElementById('bgmAudio');
+            if (bgm && !bgm.paused) {
+                bgm.volume = 0.2; // 音量を20%（0.2）まで下げる
+                
+                // アラームが鳴り終わる頃（5秒後）に元の音量（1.0）に戻す
+                setTimeout(() => {
+                    bgm.volume = 1.0;
+                }, 5000);
+            }
 
             function tone(delay) {
                 const osc = audioCtx.createOscillator();
