@@ -432,6 +432,10 @@ canvas {
         #endBreakBtn { background: #57c7a3; color: white; display: none; }
         #endBreakBtn:hover { background: #45b391; transform: translateY(-2px); }
 
+#bgmBtn { background: #fbb6ce; color: white; }
+        #bgmBtn:hover { background: #f687b3; transform: translateY(-2px); }
+        #bgmBtn.playing { background: #ed64a6; } /* 再生中の少し濃い色 */
+
         #choiceArea { margin-top: 20px; display: none; }
         .choice-btn { font-size: 1.1rem; padding: 10px 25px; }
         #breakBtn { background: #57c7a3; color: white; }
@@ -616,7 +620,12 @@ canvas {
             <button id="startBtn">スタート</button>
             <button id="resetBtn">リセット</button>
             <button id="endBreakBtn">終了</button>
-        </div>
+            
+            <button id="bgmBtn">🎵 BGM 再生</button>
+            <audio id="bgmAudio" loop>
+                <source src="IMG_6270.mp3" type="audio/mpeg">
+            </audio>
+            </div>
 
         <div id="choiceArea">
             <p style="font-weight: bold; color: #ef4444;">時間が経ちました！どうする？</p>
@@ -1607,6 +1616,31 @@ function startTimer() {
         breakBtn.addEventListener('click', goToBreak);
         continueBtn.addEventListener('click', goToContinue);
 
+// ⬇️ ここから追加：BGM再生機能のプログラム
+        const bgmBtn = document.getElementById('bgmBtn');
+        const bgmAudio = document.getElementById('bgmAudio');
+        let isBgmPlaying = false;
+
+        bgmBtn.addEventListener('click', () => {
+            if (isBgmPlaying) {
+                // 鳴っている場合は止める
+                bgmAudio.pause();
+                isBgmPlaying = false;
+                bgmBtn.textContent = '🎵 BGM 再生';
+                bgmBtn.classList.remove('playing');
+            } else {
+                // 止まっている場合は再生する
+                bgmAudio.play().then(() => {
+                    isBgmPlaying = true;
+                    bgmBtn.textContent = '⏸ BGM 停止';
+                    bgmBtn.classList.add('playing');
+                }).catch(err => {
+                    // もしファイルが見つからないなどのエラーが起きた場合の安全装置
+                    alert('エラー：音声ファイルが読み込めませんでした。MP3の指定場所（URL）を確認してください！');
+                });
+            }
+        });
+        
         clearAllDataBtn.addEventListener('click', () => {
             if (!confirm("本当にすべてのデータを削除しますか？\n登録したラベルやタスク名、これまでの勉強記録ログがすべて消去され、元に戻せなくなります。")) return;
             if (!confirm("【最終確認】本当に初期化してよろしいですか？（蓄積されたデータがすべてまっさらになります）")) return;
