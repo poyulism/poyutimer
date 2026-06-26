@@ -1595,8 +1595,7 @@ function startTimer() {
             endBreakBtn.style.display = 'none';
         });
 
-        saveRecordBtn.addEventListener('click', () => {
-            playBeep(); 
+        saveRecordBtn.addEventListener('click', () => 
             checkAndResetDailyRecords();
 
             const totalSeconds = totalElapsedBeforeContinue + (totalWork25Count * TIME_WORK25) + totalOverTimeSeconds;
