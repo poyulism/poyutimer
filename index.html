@@ -603,9 +603,12 @@ canvas {
                 <div class="total-area">
              合計勉強時間 <span id="totalStudyTime">0分00秒</span>
         </div>
-            <div style="margin-top: 30px; text-align: center; padding-bottom: 20px;">
-            <button id="clearAllDataBtn" style="background: #ef4444; color: white; font-size: 0.9rem; padding: 8px 16px; border-radius: 20px; box-shadow: none; margin: 0;">⚠️ 全データを初期化する</button>
-         </div>
+          <div style="margin-top: 30px; text-align: center; padding-bottom: 20px;">
+            <button id="exportBtn" style="background: #4CAF50; color: white; font-size: 0.9rem; padding: 8px 16px; border-radius: 20px; box-shadow: none; margin: 0 5px 10px 5px; border: none; cursor: pointer;">⬆️ データを書き出し</button>
+            <button id="importBtn" style="background: #FF9800; color: white; font-size: 0.9rem; padding: 8px 16px; border-radius: 20px; box-shadow: none; margin: 0 5px 10px 5px; border: none; cursor: pointer;">⬇️ データを読み込み</button>
+            <br>
+            <button id="clearAllDataBtn" style="background: #ef4444; color: white; font-size: 0.9rem; padding: 8px 16px; border-radius: 20px; box-shadow: none; margin: 0; border: none; cursor: pointer;">⚠️ 全データを初期化する</button>
+        </div>  
     </div>
 </div>
     
@@ -1595,7 +1598,7 @@ function startTimer() {
             endBreakBtn.style.display = 'none';
         });
 
-        saveRecordBtn.addEventListener('click', () => {
+        saveRecordBtn.addEventListener('click', () => { 
             checkAndResetDailyRecords();
 
             const totalSeconds = totalElapsedBeforeContinue + (totalWork25Count * TIME_WORK25) + totalOverTimeSeconds;
@@ -1661,7 +1664,58 @@ function startTimer() {
             location.reload(); 
         });
 
+　　　　　// ⬇️ ここから追加：データ引き継ぎ（同期）機能
+const exportBtn = document.getElementById('exportBtn');
+const importBtn = document.getElementById('importBtn');
+
+// ① データを書き出す（コピーする）処理
+exportBtn.addEventListener('click', () => {
+    // 3つの分かれたデータを1つのオブジェクトにまとめる
+    const appData = {
+        category: localStorage.getItem('poyu_category_data'),
+        logs: localStorage.getItem('poyu_global_logs'),
+        date: localStorage.getItem('poyu_timer_date')
+    };
+    // テキスト（文字列）に変換
+    const exportStr = JSON.stringify(appData);
+
+    // クリップボードにコピー
+    navigator.clipboard.writeText(exportStr).then(() => {
+        alert("データをコピーしました！\nLINEやメール等でPC/スマホに送り、読み込みボタンから貼り付けてください。");
+    }).catch(err => {
+        // 万が一スマホの制限等で自動コピーに失敗した場合は、手動でコピーさせる
+        prompt("自動コピーに失敗しました。以下のテキストを全選択してコピーしてください：", exportStr);
+    });
+});
+
+// ② データを読み込む（ペーストする）処理
+importBtn.addEventListener('click', () => {
+    const inputStr = prompt("【データ読み込み】\nコピーしたテキストを貼り付けてください。\n※現在の端末のデータはすべて上書きされます！");
+    if (!inputStr) return; // キャンセルした場合は何もしない
+
+    try {
+        const importedData = JSON.parse(inputStr);
         
+        // 正しいデータ形式か確認してから、それぞれの箱に戻す
+        if (importedData.category !== undefined) {
+            if (importedData.category === null) localStorage.removeItem('poyu_category_data');
+            else localStorage.setItem('poyu_category_data', importedData.category);
+        }
+        if (importedData.logs !== undefined) {
+            if (importedData.logs === null) localStorage.removeItem('poyu_global_logs');
+            else localStorage.setItem('poyu_global_logs', importedData.logs);
+        }
+        if (importedData.date !== undefined) {
+            if (importedData.date === null) localStorage.removeItem('poyu_timer_date');
+            else localStorage.setItem('poyu_timer_date', importedData.date);
+        }
+
+        alert("データの同期が完了しました！画面を再読み込みします。");
+        location.reload();
+    } catch (e) {
+        alert("エラー：データの形式が正しくありません。最初から最後まで欠けずにコピーできているか確認してください。");
+    }
+});
 
       // 1. グラフ管理用変数
 let myWeekChart = null;
