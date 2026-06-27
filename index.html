@@ -1747,25 +1747,30 @@ function getWeekRangeLabel(weekStr) {
 
     return `${startM}/${startD}～${endM}/${endD}`;
 }
+
+// ★追加：グラフ用の時間を「○時間○分」に変換する関数
+function formatChartTime(minutes) {
+    if (minutes === 0) return "0分";
+    const h = Math.floor(minutes / 60);
+    const m = Math.floor(minutes % 60);
+    if (h > 0 && m > 0) return `${h}時間${m}分`;
+    if (h > 0) return `${h}時間`;
+    return `${m}分`;
+}
+
 // 3. 週間グラフを描画する関数
 function renderWeekChart(weekValue) {
     if (myWeekChart) myWeekChart.destroy();
-    
-    // '[]' を '{}' に変更し、辞書型として正しく読み込む
     const logs = JSON.parse(localStorage.getItem('poyu_global_logs') || '{}');
     const [year, weekNum] = weekValue.split('-W');
-    
     const monday = new Date(year, 0, (weekNum - 1) * 7 + 1);
     monday.setDate(monday.getDate() - monday.getDay() + 1);
-    
     const weekData = new Array(7).fill(0);
 
-    // Object.keysを使って日付ごとに正しくループ処理する
     Object.keys(logs).forEach(dateStr => {
         const logDate = new Date(dateStr); 
         const diffDays = Math.floor((logDate - monday) / (1000 * 60 * 60 * 24));
         if (diffDays >= 0 && diffDays < 7) {
-            // その日のタスク（配列）から rawSeconds を合計して分に変換
             const dayTotalSec = logs[dateStr].reduce((sum, item) => sum + (item.rawSeconds || 0), 0);
             weekData[diffDays] += dayTotalSec / 60;
         }
@@ -1777,7 +1782,7 @@ function renderWeekChart(weekValue) {
         data: {
             labels: ['月', '火', '水', '木', '金', '土', '日'],
             datasets: [{
-                label: '勉強時間(分)',
+                label: '勉強時間',
                 data: weekData,
                 backgroundColor: '#7bc0e3'
             }]
@@ -1785,7 +1790,27 @@ function renderWeekChart(weekValue) {
         options: { 
             responsive: true, 
             maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true } }
+            scales: { 
+                y: { 
+                    beginAtZero: true,
+                    ticks: {
+                        // ⬇️ ここでY軸の数値を「時間分」に変換
+                        callback: function(value) {
+                            return formatChartTime(value);
+                        }
+                    }
+                } 
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        // ⬇️ ここでタップした時の吹き出しを「時間分」に変換
+                        label: function(context) {
+                            return formatChartTime(context.parsed.y);
+                        }
+                    }
+                }
+            }
         }
     });
 }
@@ -1793,12 +1818,9 @@ function renderWeekChart(weekValue) {
 // 4. 月間グラフを描画する関数
 function renderMonthChart(yearValue) {
     if (myMonthChart) myMonthChart.destroy();
-    
-    // ここも '{}' に修正
     const logs = JSON.parse(localStorage.getItem('poyu_global_logs') || '{}');
     const monthData = new Array(12).fill(0);
     
-    // Object.keysを使って日付ごとに正しくループ処理する
     Object.keys(logs).forEach(dateStr => {
         const logDate = new Date(dateStr);
         if (logDate.getFullYear() == yearValue) {
@@ -1806,19 +1828,43 @@ function renderMonthChart(yearValue) {
             monthData[logDate.getMonth()] += dayTotalSec / 60;
         }
     });
-
+    
     const ctx = document.getElementById('chartContainerMonth').getContext('2d');
     myMonthChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
             datasets: [{
-                label: '勉強時間(分)',
+                label: '勉強時間',
                 data: monthData,
                 backgroundColor: '#7bc0e3'
             }]
         },
-        options: { responsive: true, maintainAspectRatio: false }
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            scales: { 
+                y: { 
+                    beginAtZero: true,
+                    ticks: {
+                        // ⬇️ ここでY軸の数値を「時間分」に変換
+                        callback: function(value) {
+                            return formatChartTime(value);
+                        }
+                    }
+                } 
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        // ⬇️ ここでタップした時の吹き出しを「時間分」に変換
+                        label: function(context) {
+                            return formatChartTime(context.parsed.y);
+                        }
+                    }
+                }
+            }
+        }
     });
 }
 
