@@ -564,37 +564,39 @@ canvas {
             </div>
         </div>
 
-        <div class="menu-folder" id="folderWeek">
+　　　　<div class="menu-folder" id="folderWeek">
             <div class="menu-folder-header">📊 週間の勉強記録</div>
-    <div class="menu-folder-content">
-        <div class="filter-area">
-            <input type="week" id="weekPicker">
+            <div class="menu-folder-content">
+                <div class="filter-area">
+                    <input type="week" id="weekPicker">
+                </div>
+                <div class="chart-container">
+                    <canvas id="chartContainerWeek" style="width: 100%; height: 160px;"></canvas>
+                </div>
+                <div class="history-detail-area">
+                    <h3 id="selectedDayTitleWeek">選択してください</h3>
+                    <ul id="historyListWeek" class="history-list"></ul>
+                </div>
+            </div>
         </div>
-        <div class="chart-container">
-            <canvas id="chartContainerWeek" style="min-width: 500px; height: 160px;"></canvas>
-        </div>
-        <div class="history-detail-area">
-            <h3 id="selectedDayTitleWeek">選択してください</h3>
-            <ul id="historyListWeek" class="history-list"></ul>
-        </div>
-    </div>
-</div>
 
         <div class="menu-folder" id="folderMonth">
             <div class="menu-folder-header">📆 月間の勉強記録</div>
             <div class="menu-folder-content">
-                <div class="filter-area">
-            <select id="yearSelect"></select>
-        </div>
-        <div class="chart-container">
-            <canvas id="chartContainerMonth" style="min-width: 600px; height: 160px;"></canvas>
-        </div>
+                <div class="filter-area" style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                    <button id="prevMonthPageBtn" style="padding: 5px 15px; font-size: 1.2rem; background: #e1e8ed; color: #4a5568; border-radius: 8px; border: none; cursor: pointer; box-shadow: none; margin: 0;">◀</button>
+                    <select id="yearSelect" style="flex: 1; text-align: center; font-size: 1rem; padding: 5px;"></select>
+                    <button id="nextMonthPageBtn" style="padding: 5px 15px; font-size: 1.2rem; background: #e1e8ed; color: #4a5568; border-radius: 8px; border: none; cursor: pointer; box-shadow: none; margin: 0;">▶</button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="chartContainerMonth" style="width: 100%; height: 160px;"></canvas>
+                </div>
                 <div class="history-detail-area">
-                    <h3 id="selectedDayTitleMonth">選択してください</h3>
+                    <h3 id="selectedDayTitleMonth">期間内の総時間</h3>
                     <ul id="historyListMonth" class="history-list"></ul>
                 </div>
             </div>
-         </div>
+        </div>
 
         <div class="record-area">
     
@@ -1457,6 +1459,9 @@ function startTimer() {
 
                         if (mode === 'work25') {
                             if (timeLeft === 0) {
+　　　　　　　　　　　　　　　if (audioCtx && audioCtx.state === 'suspended') {
+                                    audioCtx.resume();
+                                }
                                 playBeep();
                                 statusDisplay.textContent = "集中終了！オーバータイム突入";
                                 timerDisplay.style.color = "#ff8e75"; 
@@ -1478,7 +1483,11 @@ function startTimer() {
                                 continueBtn.style.display = 'inline-block'; // ★最初の1分終了時は「継続」ボタンを出す
                             } 
                            else if (mode === 'choosing' && timeLeft <= 0) { clearTimerState(); goToContinue(); return; }
-                            else if (mode === 'break' && timeLeft <= 0) { clearTimerState(); playBeep(); goToFirstModeAutoStart(); return; }
+                            else if (mode === 'break' && timeLeft <= 0) { clearTimerState(); 
+　　　　　　　　　　　　　　　if (audioCtx && audioCtx.state === 'suspended') {
+                                    audioCtx.resume();
+                                }
+　　　　　　　　　　　　　　　playBeep(); goToFirstModeAutoStart(); return; }
                         }
                     }
                     saveTimerState();
@@ -1517,68 +1526,62 @@ function startTimer() {
         }
 
        function goToContinue() {
-            if (mode === 'work25') return; // ★追加：ダブルタップ防止
+            if (mode === 'work25') return;
             mode = 'work25';
-            timeLeft = TIME_WORK25; 
+            timeLeft = TIME_WORK25;
             statusDisplay.textContent = "作業中！(25分集中)";
             timerDisplay.style.color = "#7bc0e3"; 
             choiceArea.style.display = 'none'; 
-            endBreakBtn.style.display = 'none'; 
+            endBreakBtn.style.display = 'inline-block'; // ★変更：常に終了ボタンを表示
             hasContinuedInCurrentLoop = true; 
             startBtn.classList.remove('over-break');
-            startBtn.textContent = 'カウント中'; 
+            startBtn.textContent = 'カウント中';
             startBtn.disabled = true;
             updateDisplay();
         }
 
         function goToBreak() {
-            if (mode === 'break') return; // ★追加：すでに休憩モードに入っている場合は、連続タップを無視する（ダブルタップ防止）
-
-            // 「どの画面から休憩ボタンを押したか」で休憩時間を決める
+            if (mode === 'break') return;
+            
             if (mode === 'choosing' || mode === 'first') {
-                // 最初の1分（どっちにする？の選択中）から休憩を押した場合
-                timeLeft = TIME_SHORT_BREAK; // 1分
+                timeLeft = TIME_SHORT_BREAK;
                 statusDisplay.textContent = "休憩中！(1分)";
             } else {
-                // 25分集中（オーバータイム中）から休憩を押した場合
-                timeLeft = TIME_BREAK; // 5分
+                timeLeft = TIME_BREAK;
                 statusDisplay.textContent = "休憩中！(5分)";
             }
             
-            mode = 'break'; // 判定が終わってから、タイマーを休憩モードに切り替える
-            
-            timerDisplay.style.color = "#57c7a3"; 
+            mode = 'break';
+            timerDisplay.style.color = "#57c7a3";
             choiceArea.style.display = 'none';
-            if (totalWork25Count > 0) { endBreakBtn.style.display = 'inline-block'; }
+            endBreakBtn.style.display = 'inline-block'; // ★変更：常に終了ボタンを表示
             startBtn.classList.remove('over-break'); 
             startBtn.textContent = 'カウント中'; 
             startBtn.disabled = true;
             updateDisplay();
         }
 
-            // ★追加：休憩終了時に自動で次のセットを開始する処理
         function goToFirstModeAutoStart() {
-            mode = 'first'; 
+            mode = 'first';
             timeLeft = TIME_FIRST; 
             statusDisplay.textContent = "最初の集中！";
             timerDisplay.style.color = "#7bc0e3"; 
             choiceArea.style.display = 'none'; 
-            endBreakBtn.style.display = 'none'; 
+            endBreakBtn.style.display = 'inline-block'; // ★変更：常に終了ボタンを表示
             taskSelectArea.style.display = 'none'; 
-            startBtn.classList.remove('over-break'); 
-            startBtn.disabled = true; // 自動でカウント中になるため押せないようにする
+            startBtn.classList.remove('over-break');
+            startBtn.disabled = true; 
             startBtn.textContent = 'カウント中';
             totalElapsedBeforeContinue = 0; 
             totalOverTimeSeconds = 0; 
             hasContinuedInCurrentLoop = false; 
-            
-            // すでに裏でタイマーは動いているので、表示を更新して状態を保存するだけ
             updateDisplay();
             saveTimerState();
         }
            
         startBtn.addEventListener('click', () => {
             unlockAudio(); // ★追加: ボタンを押した瞬間に音のロックを解除
+　　　　　　endBreakBtn.style.display = 'inline-block'; //
             if (startBtn.classList.contains('over-break')) { goToBreak(); } else { if (timerId === null) { startTimer(); } }
         });
        
@@ -1588,6 +1591,7 @@ function startTimer() {
         });
 
         endBreakBtn.addEventListener('click', () => {
+　　　　　　unlockAudio();
             if (timerId !== null) {
                 clearInterval(timerId);
                 timerId = null;
@@ -1601,7 +1605,14 @@ function startTimer() {
         saveRecordBtn.addEventListener('click', () => { 
             checkAndResetDailyRecords();
 
-            const totalSeconds = totalElapsedBeforeContinue + (totalWork25Count * TIME_WORK25) + totalOverTimeSeconds;
+            let currentWork25Elapsed = 0;
+            // ★追加：25分集中の途中で終了した場合、その時点までの経過時間を計算して足し込む
+            if (mode === 'work25' && timeLeft > 0) {
+                currentWork25Elapsed = TIME_WORK25 - timeLeft;
+            }
+
+            // 修正：currentWork25Elapsed（途中の経過時間）を追加で足す
+            const totalSeconds = totalElapsedBeforeContinue + (totalWork25Count * TIME_WORK25) + totalOverTimeSeconds + currentWork25Elapsed;
             const timeString = formatSecondsToText(totalSeconds);
             
             const selectedLabel = finishLabelDropdown.value;
@@ -1621,11 +1632,17 @@ function startTimer() {
             finishLabelDropdown.value = savedLabel;
             finishLabelDropdown.dispatchEvent(new Event('change'));
             
-            finishMemoInput.value = ""; 
+            finishMemoInput.value = "";
         });
 
-        breakBtn.addEventListener('click', goToBreak);
-        continueBtn.addEventListener('click', goToContinue);
+        breakBtn.addEventListener('click', () => {
+            unlockAudio(); // ⬇️ ここにも追加
+            goToBreak();
+        });
+        continueBtn.addEventListener('click', () => {
+            unlockAudio(); // ⬇️ ここにも追加
+            goToContinue();
+        });
 
 // ⬇️ ここから追加：BGM再生機能のプログラム
         const bgmBtn = document.getElementById('bgmBtn');
@@ -1815,28 +1832,46 @@ function renderWeekChart(weekValue) {
     });
 }
 
+let currentMonthPage = Math.floor(new Date().getMonth() / 4);
+
 // 4. 月間グラフを描画する関数
 function renderMonthChart(yearValue) {
     if (myMonthChart) myMonthChart.destroy();
     const logs = JSON.parse(localStorage.getItem('poyu_global_logs') || '{}');
     const monthData = new Array(12).fill(0);
     
+    const historyListMonth = document.getElementById('historyListMonth');
+    if (historyListMonth) historyListMonth.innerHTML = '';
+    const dayMap = {};
+
     Object.keys(logs).forEach(dateStr => {
         const logDate = new Date(dateStr);
         if (logDate.getFullYear() == yearValue) {
             const dayTotalSec = logs[dateStr].reduce((sum, item) => sum + (item.rawSeconds || 0), 0);
             monthData[logDate.getMonth()] += dayTotalSec / 60;
+            
+            // リスト表示用に日別の合計（秒）を保存
+            if (dayTotalSec > 0) {
+                dayMap[dateStr] = dayTotalSec;
+            }
         }
     });
+    
+    // ★4ヶ月分だけ切り抜く
+    const startIdx = currentMonthPage * 4;
+    const endIdx = startIdx + 4;
+    const slicedData = monthData.slice(startIdx, endIdx);
+    const allLabels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+    const slicedLabels = allLabels.slice(startIdx, endIdx);
     
     const ctx = document.getElementById('chartContainerMonth').getContext('2d');
     myMonthChart = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+            labels: slicedLabels,
             datasets: [{
                 label: '勉強時間',
-                data: monthData,
+                data: slicedData,
                 backgroundColor: '#7bc0e3'
             }]
         },
@@ -1847,7 +1882,6 @@ function renderMonthChart(yearValue) {
                 y: { 
                     beginAtZero: true,
                     ticks: {
-                        // ⬇️ ここでY軸の数値を「時間分」に変換
                         callback: function(value) {
                             return formatChartTime(value);
                         }
@@ -1857,7 +1891,6 @@ function renderMonthChart(yearValue) {
             plugins: {
                 tooltip: {
                     callbacks: {
-                        // ⬇️ ここでタップした時の吹き出しを「時間分」に変換
                         label: function(context) {
                             return formatChartTime(context.parsed.y);
                         }
@@ -1866,12 +1899,66 @@ function renderMonthChart(yearValue) {
             }
         }
     });
+
+    // ★タイトルと合計時間を更新
+    const titleMonth = document.getElementById('selectedDayTitleMonth');
+    if (titleMonth) {
+        const totalMin = slicedData.reduce((sum, val) => sum + val, 0);
+        titleMonth.innerHTML = `${yearValue}年 ${slicedLabels[0]}〜${slicedLabels[3]}<br><span style="font-size:0.85rem; color:#7bc0e3;">期間総時間: ${formatChartTime(totalMin)}</span>`;
+    }
+
+    // ★グラフの下に「その4ヶ月間」の各日の記録リストを表示
+    if (historyListMonth) {
+        const sortedDates = Object.keys(dayMap).sort();
+        const filteredDates = sortedDates.filter(dateStr => {
+            const m = new Date(dateStr).getMonth();
+            return m >= startIdx && m < endIdx;
+        });
+
+        if (filteredDates.length === 0) {
+            historyListMonth.innerHTML = '<li class="record-item" style="color:#94a3b8;">この期間の記録はありません</li>';
+        } else {
+            filteredDates.forEach(dateKey => {
+                const li = document.createElement('li');
+                li.className = 'record-item';
+                li.style.flexDirection = 'row';
+                li.style.justifyContent = 'space-between';
+                li.style.borderLeft = "4px solid #cbd5e1";
+                li.innerHTML = `${dateKey.replace(/-/g, '/')} <span class="time-span" style="color:#4a5568;">${formatSecondsToText(dayMap[dateKey])}</span>`;
+                historyListMonth.appendChild(li);
+            });
+        }
+    }
 }
 
 // 5 & 6. ページ読み込み時の初期化とイベントリスナー（安全に実行するために統合）
 window.addEventListener('DOMContentLoaded', () => {
     const now = new Date();
     const year = now.getFullYear();
+
+const prevMonthPageBtn = document.getElementById('prevMonthPageBtn');
+    const nextMonthPageBtn = document.getElementById('nextMonthPageBtn');
+    const yearSel = document.getElementById('yearSelect');
+
+    if (prevMonthPageBtn && nextMonthPageBtn && yearSel) {
+        prevMonthPageBtn.addEventListener('click', () => {
+            currentMonthPage--;
+            if (currentMonthPage < 0) {
+                currentMonthPage = 2; // 9〜12月へ移動
+                if (yearSel.selectedIndex > 0) yearSel.selectedIndex--; // 前の年にさかのぼる
+            }
+            renderMonthChart(yearSel.value);
+        });
+        
+        nextMonthPageBtn.addEventListener('click', () => {
+            currentMonthPage++;
+            if (currentMonthPage > 2) {
+                currentMonthPage = 0; // 1〜4月へ移動
+                if (yearSel.selectedIndex < yearSel.options.length - 1) yearSel.selectedIndex++; // 次の年へ進む
+            }
+            renderMonthChart(yearSel.value);
+        });
+    }
 
     // 1. 週間選択（weekPicker）のイベントリスナー登録
     const weekPicker = document.getElementById('weekPicker');
@@ -1886,9 +1973,10 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     // 2. 月間選択（yearSelect）のイベントリスナー登録
-    const yearSelect = document.getElementById('yearSelect');
+   const yearSelect = document.getElementById('yearSelect');
     if (yearSelect) {
         yearSelect.addEventListener('change', (e) => {
+            currentMonthPage = 0; // ★追加：手動で年を変えたら「1月〜4月」に戻す
             renderMonthChart(e.target.value);
         });
         
