@@ -1461,71 +1461,147 @@ if (weekPicker) {
                 timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
             }
         }
-function startTimer() {
-            if (!lastTickTime) {
-                lastTickTime = Date.now();
-            }            
+
+　　　function startTimer() {
+            if (timerId !== null) return;
+
+            // 最初に1回セーブ（状態保存用）
+            saveTimerState();
+
             timerId = setInterval(() => {
                 const now = Date.now();
-                // 前回チェックした時から、何秒経過したかを計算（バックグラウンド対策）
-                const deltaSec = Math.floor((now - lastTickTime) / 1000);
-                
-                if (deltaSec > 0) {
-                    lastTickTime += deltaSec * 1000; // 経過した分だけ基準時刻を進める
-                    
-                    // 裏に隠れていた秒数分だけ、タイマー処理を超高速で回して現在に追いつかせる
-                    for (let i = 0; i < deltaSec; i++) {
-                        if (mode === 'first' || mode === 'choosing') { totalElapsedBeforeContinue++; }
-                        if (mode === 'work25' && timeLeft < 0) { totalOverTimeSeconds++; }
-                      
-                        timeLeft--;
+                if (lastTickTime === null) {
+                    lastTickTime = now;
+                }
+                const delta = Math.floor((now - lastTickTime) / 1000);
 
-                        if (mode === 'work25') {
-                            if (timeLeft === 0) {
-　　　　　　　　　　　　　　　if (audioCtx && audioCtx.state === 'suspended') {
-                                    audioCtx.resume();
-                                }
-                                playBeep();
-                                statusDisplay.textContent = "集中終了！オーバータイム突入";
-                                timerDisplay.style.color = "#ff8e75"; 
-                                totalWork25Count++; 
-                                
-                                choiceArea.style.display = 'block';
-                                continueBtn.style.display = 'none'; // ★オーバータイム時は「継続」ボタンを隠す
+                if (delta >= 1) {
+                    lastTickTime += delta * 1000;
 
-                                startBtn.disabled = true; 
-                                startBtn.textContent = 'カウント中';
+                    for (let i = 0; i < delta; i++) {
+                        if (timeLeft > 0) {
+                            timeLeft--;
+
+                            if (mode === 'work25') {
+                                totalElapsedBeforeContinue++;
                             }
-                       } else {
+                        } else {
                             if (mode === 'first' && timeLeft <= 0) {
                                 mode = 'choosing';
-                                timeLeft = TIME_CHOOSING; 
+                                timeLeft = TIME_CHOOSING;
                                 statusDisplay.textContent = "どっちにする？ (自動継続まであと少し)";
-                                timerDisplay.style.color = "#ef4444"; 
-                                choiceArea.style.display = 'block'; 
+                                timerDisplay.style.color = "#ef4444";
+                                choiceArea.style.display = 'block';
                                 continueBtn.style.display = 'inline-block';
                             } 
-                           else if (mode === 'choosing' && timeLeft <= 0) { clearTimerState(); goToContinue(); continue; } // ★修正：returnをcontinueに変更
+                            else if (mode === 'choosing' && timeLeft <= 0) { 
+                                clearTimerState(); 
+                                goToContinue(); 
+                                break; // ループを抜けて次の秒数計算へ
+                            }
                             else if (mode === 'break' && timeLeft <= 0) { 
                                 clearTimerState();
                                 if (audioCtx && audioCtx.state === 'suspended') {
                                     audioCtx.resume();
                                 }
-                                playBeep(); goToFirstModeAutoStart(); continue; // ★修正：returnをcontinueに変更
+                                playBeep(); 
+                                goToFirstModeAutoStart(); 
+                                break; // ループを抜けて次の秒数計算へ
                             }
                         }
 
-                    saveTimerState();
-                    updateDisplay(); // 追いついた結果をまとめて画面に反映
+                        if (mode === 'work25' && timeLeft <= 0) {
+                            totalOverTimeSeconds++;
+                        }
+                    }
+                    updateDisplay();
+                    saveTimerState(); // 毎秒の状態をセーブ
                 }
-            }, 500); // 0.5秒間隔で高速監視し、画面を開いた瞬間の数字のズレをなくします
-
-            if (mode !== 'choosing') { startBtn.textContent = 'カウント中'; startBtn.disabled = true; }
-            saveTimerState();
+            }, 200);
         }
 
+        // 状態保存（1秒ごとの定期保存、および手動操作時）
+        function saveTimerState() {
+            if (!isStorageAvailable) return;
+            const state = {
+                mode: mode,
+                timeLeft: timeLeft,
+                totalElapsedBeforeContinue: totalElapsedBeforeContinue,
+                totalOverTimeSeconds: totalOverTimeSeconds,
+                totalWork25Count: totalWork25Count,
+                isTimerRunning: (timerId !== null),
+                lastTickTime: lastTickTime
+            };
+            localStorage.setItem('poyutimer_current_state', JSON.stringify(state));
+        }
 
-               // ★バグ修正：リセット時にタイマーを完全に初期化して最初の集中（1分）に戻す
+        // 保存された状態の完全消去
+        function clearTimerState() {
+            if (!isStorageAvailable) return;
+            localStorage.removeItem('poyutimer_current_state');
+        }
+
+        // ★追加：アプリが開いた瞬間に前の状態を完全に復元する処理
+        function restoreTimerState() {
+            const savedData = localStorage.getItem('poyutimer_current_state');
+            if (!savedData) return;
+
+            const state = JSON.parse(savedData);
+            
+            // データを変数に復元
+            mode = state.mode;
+            timeLeft = state.timeLeft;
+            totalElapsedBeforeContinue = state.totalElapsedBeforeContinue;
+            totalOverTimeSeconds = state.totalOverTimeSeconds;
+            totalWork25Count = state.totalWork25Count;
+
+            // 画面の見た目（テキスト・色・ボタン表示）を現在のモードに完全に合わせる
+            endBreakBtn.style.display = (mode !== 'first' || state.isTimerRunning) ? 'inline-block' : 'none';
+
+            if (mode === 'first') {
+                statusDisplay.textContent = "最初の集中！";
+                timerDisplay.style.color = "#7bc0e3";
+                choiceArea.style.display = 'none';
+            } else if (mode === 'choosing') {
+                statusDisplay.textContent = "どっちにする？ (自動継続まであと少し)";
+                timerDisplay.style.color = "#ef4444";
+                choiceArea.style.display = 'block';
+                continueBtn.style.display = 'inline-block';
+            } else if (mode === 'work25') {
+                if (timeLeft <= 0) {
+                    statusDisplay.textContent = "集中終了！オーバータイム突入";
+                    timerDisplay.style.color = "#ff8e75";
+                    choiceArea.style.display = 'block';
+                    continueBtn.style.display = 'none';
+                } else {
+                    statusDisplay.textContent = "作業中！(25分集中)";
+                    timerDisplay.style.color = "#7bc0e3";
+                    choiceArea.style.display = 'none';
+                }
+            } else if (mode === 'break') {
+                if (totalWork25Count > 0) {
+                    statusDisplay.textContent = "休憩中！(5分)";
+                } else {
+                    statusDisplay.textContent = "休憩中！(1分)";
+                }
+                timerDisplay.style.color = "#57c7a3";
+                choiceArea.style.display = 'none';
+            }
+
+            // もし裏でタイマーが動いていたなら、自動で再開させて「追いつき処理」を走らせる
+            if (state.isTimerRunning && state.lastTickTime) {
+                lastTickTime = state.lastTickTime;
+                startBtn.textContent = 'カウント中';
+                startBtn.disabled = true;
+                startTimer(); 
+            } else {
+                startBtn.textContent = 'スタート';
+                startBtn.disabled = false;
+                updateDisplay();
+            }
+        }
+
+        // ★バグ修正：リセット時にタイマーを完全に初期化して最初の集中（1分）に戻す
         function stopAndBackToFirst() {
             if (timerId !== null) {
                 clearInterval(timerId);
@@ -1547,8 +1623,13 @@ function startTimer() {
             totalWork25Count = 0; 
             hasContinuedInCurrentLoop = false; 
             updateDisplay();
-            clearTimerState(); // ★追加：古い保存データを完全に消去し、リロード時のバグを防ぐ
+            clearTimerState(); // 古い保存データを完全に消去し、リロード時のバグを防ぐ
         }
+
+        // ページ読み込み時に状態を復元
+        window.addEventListener('load', () => {
+            restoreTimerState();
+        });
 
        function goToContinue() {
             if (mode === 'work25') return;
