@@ -1373,26 +1373,49 @@ if (weekPicker) {
             totalElapsedBeforeContinue = state.totalElapsedBeforeContinue;
             totalOverTimeSeconds = state.totalOverTimeSeconds;
             totalWork25Count = state.totalWork25Count;
-            
-            // 画面の見た目を現在のモードに合わせる
-            if (mode === 'work25') {
-                document.body.className = 'work-mode';
+
+            // ★修正：画面の見た目（テキスト・色・ボタン表示）を現在のモードに完全に合わせる
+            endBreakBtn.style.display = (mode !== 'first' || state.isTimerRunning) ? 'inline-block' : 'none';
+
+            if (mode === 'first') {
+                statusDisplay.textContent = "最初の集中！";
+                timerDisplay.style.color = "#7bc0e3";
                 choiceArea.style.display = 'none';
-            } else if (mode === 'break') {
-                document.body.className = 'break-mode';
-                choiceArea.style.display = 'none';
-            } else if (mode === 'first' || mode === 'choosing') {
-                document.body.className = 'over-mode';
+            } else if (mode === 'choosing') {
+                statusDisplay.textContent = "どっちにする？ (自動継続まであと少し)";
+                timerDisplay.style.color = "#ef4444";
                 choiceArea.style.display = 'block';
-                if (mode === 'first') continueBtn.style.display = 'none';
-                if (mode === 'choosing') continueBtn.style.display = 'inline-block';
+                continueBtn.style.display = 'inline-block';
+            } else if (mode === 'work25') {
+                if (timeLeft <= 0) {
+                    statusDisplay.textContent = "集中終了！オーバータイム突入";
+                    timerDisplay.style.color = "#ff8e75";
+                    choiceArea.style.display = 'block';
+                    continueBtn.style.display = 'none';
+                } else {
+                    statusDisplay.textContent = "作業中！(25分集中)";
+                    timerDisplay.style.color = "#7bc0e3";
+                    choiceArea.style.display = 'none';
+                }
+            } else if (mode === 'break') {
+                if (totalWork25Count > 0) {
+                    statusDisplay.textContent = "休憩中！(5分)";
+                } else {
+                    statusDisplay.textContent = "休憩中！(1分)";
+                }
+                timerDisplay.style.color = "#57c7a3";
+                choiceArea.style.display = 'none';
             }
 
             // もし裏でタイマーが動いていたなら、自動で再開させて「追いつき処理」を走らせる
             if (state.isTimerRunning && state.lastTickTime) {
-                lastTickTime = state.lastTickTime; 
+                lastTickTime = state.lastTickTime;
+                startBtn.textContent = 'カウント中';
+                startBtn.disabled = true;
                 startTimer(); 
             } else {
+                startBtn.textContent = 'スタート';
+                startBtn.disabled = false;
                 updateDisplay();
             }
         }
@@ -1473,23 +1496,25 @@ function startTimer() {
                                 startBtn.disabled = true; 
                                 startBtn.textContent = 'カウント中';
                             }
-                        } else {
+                       } else {
                             if (mode === 'first' && timeLeft <= 0) {
                                 mode = 'choosing';
                                 timeLeft = TIME_CHOOSING; 
                                 statusDisplay.textContent = "どっちにする？ (自動継続まであと少し)";
                                 timerDisplay.style.color = "#ef4444"; 
                                 choiceArea.style.display = 'block'; 
-                                continueBtn.style.display = 'inline-block'; // ★最初の1分終了時は「継続」ボタンを出す
+                                continueBtn.style.display = 'inline-block';
                             } 
-                           else if (mode === 'choosing' && timeLeft <= 0) { clearTimerState(); goToContinue(); return; }
-                            else if (mode === 'break' && timeLeft <= 0) { clearTimerState(); 
-　　　　　　　　　　　　　　　if (audioCtx && audioCtx.state === 'suspended') {
+                           else if (mode === 'choosing' && timeLeft <= 0) { clearTimerState(); goToContinue(); continue; } // ★修正：returnをcontinueに変更
+                            else if (mode === 'break' && timeLeft <= 0) { 
+                                clearTimerState();
+                                if (audioCtx && audioCtx.state === 'suspended') {
                                     audioCtx.resume();
                                 }
-　　　　　　　　　　　　　　　playBeep(); goToFirstModeAutoStart(); return; }
+                                playBeep(); goToFirstModeAutoStart(); continue; // ★修正：returnをcontinueに変更
+                            }
                         }
-                    }
+
                     saveTimerState();
                     updateDisplay(); // 追いついた結果をまとめて画面に反映
                 }
@@ -1500,29 +1525,29 @@ function startTimer() {
         }
 
 
-        // ★バグ修正：リセット時にタイマーを完全に初期化して最初の集中（1分）に戻す
+               // ★バグ修正：リセット時にタイマーを完全に初期化して最初の集中（1分）に戻す
         function stopAndBackToFirst() {
             if (timerId !== null) {
-                clearInterval(timerId); 
+                clearInterval(timerId);
                 timerId = null;
-                lastTickTime = null; // ★これを追加！
-                saveTimerState();
+                lastTickTime = null;
             }
             mode = 'first'; 
-            timeLeft = TIME_FIRST; // 1分にリセット
+            timeLeft = TIME_FIRST;
             statusDisplay.textContent = "最初の集中！";
-            timerDisplay.style.color = "#7bc0e3"; 
+            timerDisplay.style.color = "#7bc0e3";
             choiceArea.style.display = 'none'; 
             endBreakBtn.style.display = 'none'; 
             taskSelectArea.style.display = 'none'; 
             startBtn.classList.remove('over-break'); 
             startBtn.disabled = false; 
             startBtn.textContent = 'スタート';
-            totalElapsedBeforeContinue = 0; 
+            totalElapsedBeforeContinue = 0;
             totalOverTimeSeconds = 0; 
             totalWork25Count = 0; 
             hasContinuedInCurrentLoop = false; 
-            updateDisplay(); // 画面表示を「01:00」に更新
+            updateDisplay();
+            clearTimerState(); // ★追加：古い保存データを完全に消去し、リロード時のバグを防ぐ
         }
 
        function goToContinue() {
