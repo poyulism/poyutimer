@@ -626,12 +626,15 @@ canvas {
             <button id="resetBtn">リセット</button>
             <button id="endBreakBtn">終了</button>
             
-            <button id="bgmBtn">🎵 BGM 再生</button>
+<button id="bgmBtn">🎵 BGM 再生</button>
             <audio id="bgmAudio" loop>
                 <source src="IMG_6270.mp3" type="audio/mpeg">
             </audio>
+            <button id="pipBtn" style="background: #a0aec0; color: white;">📺 小窓で表示</button>
+            <canvas id="pipCanvas" width="400" height="200" style="display:none;"></canvas>
+            <video id="pipVideo" autoplay playsinline muted style="display:none;"></video>
             </div>
-
+           
         <div id="choiceArea">
             <p style="font-weight: bold; color: #ef4444;">時間が経ちました！どうする？</p>
             <button id="breakBtn" class="choice-btn">休憩する</button>
@@ -1449,76 +1452,82 @@ if (weekPicker) {
 
         function updateDisplay() {
             if (mode === 'work25' && timeLeft < 0) {
-                const overTime = Math.abs(timeLeft); 
+                const overTime = Math.abs(timeLeft);
                 if (overTime <= 5) { timerDisplay.textContent = "25:00"; } 
                 else {
-                    const totalSeconds = (25 * 60) + overTime; 
+                    const totalSeconds = (25 * 60) + overTime;
                     const minutes = Math.floor(totalSeconds / 60); const seconds = totalSeconds % 60;
                     timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
                 }
             } else {
-                const minutes = Math.floor(timeLeft / 60); const seconds = timeLeft % 60;
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
                 timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+            
+            // ⬇️ ここに追加：PiPが開いていたら小窓の映像も書き換える
+            if (document.pictureInPictureElement) { updatePiP(); }
+        }
+
+// ⬇️ ここから修正：裏側で進んだ時間を「追いつかせる」計算を独立させました
+        function tickTimerLogic() {
+            if (!lastTickTime) return;
+            const now = Date.now();
+            const deltaSec = Math.floor((now - lastTickTime) / 1000);
+             
+            if (deltaSec > 0) {
+                lastTickTime += deltaSec * 1000;
+                    
+                for (let i = 0; i < deltaSec; i++) {
+                    if (mode === 'first' || mode === 'choosing') { totalElapsedBeforeContinue++; }
+                    if (mode === 'work25' && timeLeft < 0) { totalOverTimeSeconds++; }
+             
+                    timeLeft--;
+
+                    if (mode === 'work25') {
+                        if (timeLeft === 0) {
+                            if (audioCtx && audioCtx.state === 'suspended') {
+                                audioCtx.resume();
+                            }
+                            playBeep();
+                            statusDisplay.textContent = "集中終了！オーバータイム突入";
+                            timerDisplay.style.color = "#ff8e75"; 
+                            totalWork25Count++;
+                            choiceArea.style.display = 'block';
+                            continueBtn.style.display = 'none';
+                            startBtn.disabled = true;
+                            startBtn.textContent = 'カウント中';
+                        }
+                   } else {
+                        if (mode === 'first' && timeLeft <= 0) {
+                            mode = 'choosing';
+                            timeLeft = TIME_CHOOSING; 
+                            statusDisplay.textContent = "どっちにする？ (自動継続まであと少し)";
+                            timerDisplay.style.color = "#ef4444"; 
+                            choiceArea.style.display = 'block'; 
+                            continueBtn.style.display = 'inline-block';
+                        } 
+                       else if (mode === 'choosing' && timeLeft <= 0) { clearTimerState(); goToContinue(); continue; } 
+                        else if (mode === 'break' && timeLeft <= 0) { 
+                            clearTimerState();
+                            if (audioCtx && audioCtx.state === 'suspended') {
+                                audioCtx.resume();
+                            }
+                            playBeep(); goToFirstModeAutoStart(); continue; 
+                        }
+                    }
+                }
+
+                saveTimerState();
+                updateDisplay(); 
             }
         }
 
-function startTimer() {
+        function startTimer() {
             if (!lastTickTime) {
                 lastTickTime = Date.now();
             }            
-            timerId = setInterval(() => {
-                const now = Date.now();
-                const deltaSec = Math.floor((now - lastTickTime) / 1000);
-             
-                if (deltaSec > 0) {
-                    lastTickTime += deltaSec * 1000;
-                    
-                    for (let i = 0; i < deltaSec; i++) {
-                        if (mode === 'first' || mode === 'choosing') { totalElapsedBeforeContinue++; }
-                        if (mode === 'work25' && timeLeft < 0) { totalOverTimeSeconds++; }
-             
-                        timeLeft--;
-
-                        if (mode === 'work25') {
-                            if (timeLeft === 0) {
-                                if (audioCtx && audioCtx.state === 'suspended') {
-                                    audioCtx.resume();
-                                }
-                                playBeep();
-                                statusDisplay.textContent = "集中終了！オーバータイム突入";
-                                timerDisplay.style.color = "#ff8e75"; 
-                                totalWork25Count++; 
-                                
-                                choiceArea.style.display = 'block';
-                                continueBtn.style.display = 'none';
-                                startBtn.disabled = true;
-                                startBtn.textContent = 'カウント中';
-                            }
-                       } else {
-                            if (mode === 'first' && timeLeft <= 0) {
-                                mode = 'choosing';
-                                timeLeft = TIME_CHOOSING; 
-                                statusDisplay.textContent = "どっちにする？ (自動継続まであと少し)";
-                                timerDisplay.style.color = "#ef4444"; 
-                                choiceArea.style.display = 'block'; 
-                                continueBtn.style.display = 'inline-block';
-                            } 
-                           else if (mode === 'choosing' && timeLeft <= 0) { clearTimerState(); goToContinue(); continue; } 
-                            else if (mode === 'break' && timeLeft <= 0) { 
-                                clearTimerState();
-                                if (audioCtx && audioCtx.state === 'suspended') {
-                                    audioCtx.resume();
-                                }
-                                playBeep(); goToFirstModeAutoStart(); continue; 
-                            }
-                        }
-                    } // ⬅️ ★ここ！前回このカッコが消えてしまっていました！
-
-                    saveTimerState();
-                    updateDisplay(); 
-                }
-            }, 500);
-
+            timerId = setInterval(tickTimerLogic, 500); // ★修正：独立させた計算関数をここで呼ぶ
             if (mode !== 'choosing') { startBtn.textContent = 'カウント中'; startBtn.disabled = true; }
             saveTimerState();
         }
@@ -1544,7 +1553,7 @@ function startTimer() {
             totalWork25Count = 0; 
             hasContinuedInCurrentLoop = false; 
             updateDisplay();
-            clearTimerState(); 
+            clearTimerState();
         }
 
        function goToContinue() {
@@ -1554,7 +1563,7 @@ function startTimer() {
             statusDisplay.textContent = "作業中！(25分集中)";
             timerDisplay.style.color = "#7bc0e3"; 
             choiceArea.style.display = 'none'; 
-            endBreakBtn.style.display = 'inline-block'; 
+            endBreakBtn.style.display = 'inline-block';
             hasContinuedInCurrentLoop = true; 
             startBtn.classList.remove('over-break');
             startBtn.textContent = 'カウント中';
@@ -1593,8 +1602,7 @@ function startTimer() {
             startBtn.classList.remove('over-break');
             startBtn.disabled = true;
             startBtn.textContent = 'カウント中';
-            totalElapsedBeforeContinue = 0; 
-            totalOverTimeSeconds = 0; 
+            // ★バグ修正：2周目以降も累計時間を残すため、ここにあった「0リセット」の処理を削除しました
             hasContinuedInCurrentLoop = false; 
             updateDisplay();
             saveTimerState();
@@ -1602,18 +1610,17 @@ function startTimer() {
            
         startBtn.addEventListener('click', () => {
             unlockAudio(); 
-            endBreakBtn.style.display = 'inline-block'; // ★全角スペースを修正しました
+            endBreakBtn.style.display = 'inline-block'; 
             if (startBtn.classList.contains('over-break')) { goToBreak(); } else { if (timerId === null) { startTimer(); } }
         });
-        
         resetBtn.addEventListener('click', () => {
             stopAndBackToFirst();
             clearTimerState(); 
         });
-        
         endBreakBtn.addEventListener('click', () => {
-            unlockAudio(); // ★全角スペースを修正しました
+            unlockAudio(); 
             if (timerId !== null) {
+                tickTimerLogic(); // ★最大の修正：タイマーを止める前に「裏側で進んでいた時間」を強制的に追いつかせる
                 clearInterval(timerId);
                 timerId = null;
                 lastTickTime = null; 
@@ -1622,29 +1629,26 @@ function startTimer() {
             taskSelectArea.style.display = 'flex'; 
             endBreakBtn.style.display = 'none';
         });
-
         saveRecordBtn.addEventListener('click', () => { 
             checkAndResetDailyRecords();
 
             let currentWork25Elapsed = 0;
-            // ★追加：25分集中の途中で終了した場合、その時点までの経過時間を計算して足し込む
             if (mode === 'work25' && timeLeft > 0) {
                 currentWork25Elapsed = TIME_WORK25 - timeLeft;
             }
 
-            // 修正：currentWork25Elapsed（途中の経過時間）を追加で足す
             const totalSeconds = totalElapsedBeforeContinue + (totalWork25Count * TIME_WORK25) + totalOverTimeSeconds + currentWork25Elapsed;
             const timeString = formatSecondsToText(totalSeconds);
             
             const selectedLabel = finishLabelDropdown.value;
             let selectedTask = finishTaskDropdown.value;
+           
             if (selectedTask === "なし") { selectedTask = ""; }
 
             const displayTitle = selectedTask ? `[${selectedLabel}] ${selectedTask}` : `[${selectedLabel}]`;
             
             const memoValue = finishMemoInput.value.trim();
             const savedLabel = finishLabelDropdown.value;
-
             saveToGlobalLogs(displayTitle, timeString, totalSeconds, memoValue);
             loadRecords();
 
@@ -1655,13 +1659,14 @@ function startTimer() {
             
             finishMemoInput.value = "";
         });
-
         breakBtn.addEventListener('click', () => {
-            unlockAudio(); // ⬇️ ここにも追加
+            unlockAudio(); 
+            if (timerId !== null) tickTimerLogic(); // ★念のためここでも追いつき計算
             goToBreak();
         });
         continueBtn.addEventListener('click', () => {
-            unlockAudio(); // ⬇️ ここにも追加
+            unlockAudio(); 
+            if (timerId !== null) tickTimerLogic(); // ★念のためここでも追いつき計算
             goToContinue();
         });
 
@@ -1690,6 +1695,56 @@ function startTimer() {
             }
         });
         
+// ⬇️ ここから追加：Picture in Picture（小窓表示）機能
+        const pipBtn = document.getElementById('pipBtn');
+        const pipCanvas = document.getElementById('pipCanvas');
+        const pipVideo = document.getElementById('pipVideo');
+        const pipCtx = pipCanvas.getContext('2d');
+        let pipStream = null;
+
+        // 映像の中身（タイマー）を描き直す関数
+        function updatePiP() {
+            // 背景を白で塗る
+            pipCtx.fillStyle = '#ffffff';
+            pipCtx.fillRect(0, 0, pipCanvas.width, pipCanvas.height);
+
+            // ステータス（「作業中！」など）を描く
+            pipCtx.fillStyle = '#4a5568';
+            pipCtx.font = 'bold 24px sans-serif';
+            pipCtx.textAlign = 'center';
+            pipCtx.fillText(statusDisplay.textContent, pipCanvas.width / 2, 60);
+
+            // タイマーの時間を描く
+            pipCtx.fillStyle = timerDisplay.style.color || '#7bc0e3';
+            pipCtx.font = 'bold 80px tabular-nums sans-serif';
+            pipCtx.fillText(timerDisplay.textContent, pipCanvas.width / 2, 150);
+        }
+
+        pipBtn.addEventListener('click', async () => {
+            try {
+                // すでに小窓が出ている場合は閉じる
+                if (document.pictureInPictureElement) {
+                    await document.exitPictureInPicture();
+                    return;
+                }
+                
+                // 初回のみ、Canvasを動画に変換する準備
+                if (!pipStream) {
+                    pipStream = pipCanvas.captureStream(10); // 1秒間に10回画面を更新
+                    pipVideo.srcObject = pipStream;
+                    await pipVideo.play();
+                }
+                
+                // 一度画面を描画して、小窓を起動！
+                updatePiP();
+                await pipVideo.requestPictureInPicture();
+                
+            } catch (error) {
+                console.error('PiP Error:', error);
+                alert('お使いのブラウザは小窓表示(PiP)に対応していないか、エラーが発生しました。');
+            }
+        });
+
         clearAllDataBtn.addEventListener('click', () => {
             if (!confirm("本当にすべてのデータを削除しますか？\n登録したラベルやタスク名、これまでの勉強記録ログがすべて消去され、元に戻せなくなります。")) return;
             if (!confirm("【最終確認】本当に初期化してよろしいですか？（蓄積されたデータがすべてまっさらになります）")) return;
