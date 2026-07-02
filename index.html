@@ -1949,36 +1949,67 @@ function renderWeekChart(weekValue) {
     const [year, weekNum] = weekValue.split('-W');
     const monday = new Date(year, 0, (weekNum - 1) * 7 + 1);
     monday.setDate(monday.getDate() - monday.getDay() + 1);
-    const weekData = new Array(7).fill(0);
+    
+    // ラベルごとのデータを保持するオブジェクト
+    const datasetsMap = {};
 
     Object.keys(logs).forEach(dateStr => {
         const logDate = new Date(dateStr); 
         const diffDays = Math.floor((logDate - monday) / (1000 * 60 * 60 * 24));
         if (diffDays >= 0 && diffDays < 7) {
-            const dayTotalSec = logs[dateStr].reduce((sum, item) => sum + (item.rawSeconds || 0), 0);
-            weekData[diffDays] += dayTotalSec / 60;
+            logs[dateStr].forEach(item => {
+                const label = parseLabelFromTitle(item.title);
+               
+                if (!datasetsMap[label]) {
+                    datasetsMap[label] = new Array(7).fill(0);
+                }
+                datasetsMap[label][diffDays] += (item.rawSeconds || 0) / 60;
+            });
         }
     });
+    // Chart.js用のdatasets配列に変換し、色を適用する
+    const datasets = Object.keys(datasetsMap).map(label => {
+        return {
+            label: label,
+            data: datasetsMap[label],
+            backgroundColor: getLabelColor(label)
+        };
+    });
+    // データが一切ない場合のダミー設定
+    if (datasets.length === 0) {
+        datasets.push({ label: '記録なし', data: new Array(7).fill(0), backgroundColor: '#e2e8f0' });
+    }
     
     const ctx = document.getElementById('chartContainerWeek').getContext('2d');
     myWeekChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: ['月', '火', '水', '木', '金', '土', '日'],
-            datasets: [{
-                label: '勉強時間',
-                data: weekData,
-                backgroundColor: '#7bc0e3'
-            }]
+            datasets: datasets
         },
         options: { 
             responsive: true, 
             maintainAspectRatio: false,
+            // ★追加：グラフの棒がクリックされた時の処理
+            onClick: (event, elements, chart) => {
+                if (elements.length > 0) {
+                    // クリックされた棒のインデックス（0:月曜 〜 6:日曜）を取得
+                    const dayIndex = elements[0].index;
+                    
+                    // その日の日付を計算
+                    const targetDate = new Date(monday.getTime() + (dayIndex * 24 * 60 * 60 * 1000));
+                    const dateStr = `${targetDate.getFullYear()}-${(targetDate.getMonth() + 1).toString().padStart(2, '0')}-${targetDate.getDate().toString().padStart(2, '0')}`;
+                    
+                    // 選択された日の詳細を表示
+                    showDayDetail(dateStr);
+                }
+            },
             scales: { 
+                x: { stacked: true }, // ★X軸を積み上げ設定
                 y: { 
+                    stacked: true,    // ★Y軸を積み上げ設定
                     beginAtZero: true,
                     ticks: {
-                        // ⬇️ ここでY軸の数値を「時間分」に変換
                         callback: function(value) {
                             return formatChartTime(value);
                         }
@@ -1988,9 +2019,8 @@ function renderWeekChart(weekValue) {
             plugins: {
                 tooltip: {
                     callbacks: {
-                        // ⬇️ ここでタップした時の吹き出しを「時間分」に変換
                         label: function(context) {
-                            return formatChartTime(context.parsed.y);
+                            return context.dataset.label + ': ' + formatChartTime(context.parsed.y);
                         }
                     }
                 }
@@ -1999,23 +2029,32 @@ function renderWeekChart(weekValue) {
     });
 }
 
-let currentMonthPage = Math.floor(new Date().getMonth() / 4);
-
 // 4. 月間グラフを描画する関数
 function renderMonthChart(yearValue) {
     if (myMonthChart) myMonthChart.destroy();
     const logs = JSON.parse(localStorage.getItem('poyu_global_logs') || '{}');
-    const monthData = new Array(12).fill(0);
     
     const historyListMonth = document.getElementById('historyListMonth');
     if (historyListMonth) historyListMonth.innerHTML = '';
     const dayMap = {};
 
+    // ラベルごとのデータを保持するオブジェクト
+    const datasetsMap = {};
+
     Object.keys(logs).forEach(dateStr => {
         const logDate = new Date(dateStr);
         if (logDate.getFullYear() == yearValue) {
-            const dayTotalSec = logs[dateStr].reduce((sum, item) => sum + (item.rawSeconds || 0), 0);
-            monthData[logDate.getMonth()] += dayTotalSec / 60;
+            let dayTotalSec = 0;
+            const monthIdx = logDate.getMonth();
+            
+            logs[dateStr].forEach(item => {
+                dayTotalSec += (item.rawSeconds || 0);
+                const label = parseLabelFromTitle(item.title);
+                if (!datasetsMap[label]) {
+                    datasetsMap[label] = new Array(12).fill(0);
+                }
+                datasetsMap[label][monthIdx] += (item.rawSeconds || 0) / 60;
+            });
             
             // リスト表示用に日別の合計（秒）を保存
             if (dayTotalSec > 0) {
@@ -2024,10 +2063,23 @@ function renderMonthChart(yearValue) {
         }
     });
     
-    // ★4ヶ月分だけ切り抜く
+    // 4ヶ月分だけ切り抜く
     const startIdx = currentMonthPage * 4;
     const endIdx = startIdx + 4;
-    const slicedData = monthData.slice(startIdx, endIdx);
+    
+    // Chart.js用のdatasets配列に変換し、切り抜きと色を適用
+    const datasets = Object.keys(datasetsMap).map(label => {
+        return {
+            label: label,
+            data: datasetsMap[label].slice(startIdx, endIdx),
+            backgroundColor: getLabelColor(label)
+        };
+    });
+
+    if (datasets.length === 0) {
+        datasets.push({ label: '記録なし', data: new Array(4).fill(0), backgroundColor: '#e2e8f0' });
+    }
+
     const allLabels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
     const slicedLabels = allLabels.slice(startIdx, endIdx);
     
@@ -2036,17 +2088,15 @@ function renderMonthChart(yearValue) {
         type: 'bar',
         data: {
             labels: slicedLabels,
-            datasets: [{
-                label: '勉強時間',
-                data: slicedData,
-                backgroundColor: '#7bc0e3'
-            }]
+            datasets: datasets
         },
         options: { 
             responsive: true, 
             maintainAspectRatio: false,
             scales: { 
+                x: { stacked: true }, // ★X軸を積み上げ設定
                 y: { 
+                    stacked: true,    // ★Y軸を積み上げ設定
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
@@ -2059,7 +2109,7 @@ function renderMonthChart(yearValue) {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return formatChartTime(context.parsed.y);
+                            return context.dataset.label + ': ' + formatChartTime(context.parsed.y);
                         }
                     }
                 }
@@ -2067,14 +2117,17 @@ function renderMonthChart(yearValue) {
         }
     });
 
-    // ★タイトルと合計時間を更新
+    // ★タイトルと合計時間を更新（分割されたデータセットを合算）
     const titleMonth = document.getElementById('selectedDayTitleMonth');
     if (titleMonth) {
-        const totalMin = slicedData.reduce((sum, val) => sum + val, 0);
+        let totalMin = 0;
+        datasets.forEach(ds => {
+            totalMin += ds.data.reduce((sum, val) => sum + val, 0);
+        });
         titleMonth.innerHTML = `${yearValue}年 ${slicedLabels[0]}〜${slicedLabels[3]}<br><span style="font-size:0.85rem; color:#7bc0e3;">期間総時間: ${formatChartTime(totalMin)}</span>`;
     }
 
-    // ★グラフの下に「その4ヶ月間」の各日の記録リストを表示
+    // グラフの下に「その4ヶ月間」の各日の記録リストを表示
     if (historyListMonth) {
         const sortedDates = Object.keys(dayMap).sort();
         const filteredDates = sortedDates.filter(dateStr => {
