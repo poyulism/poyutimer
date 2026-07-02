@@ -630,6 +630,19 @@ canvas {
             <audio id="bgmAudio" loop>
                 <source src="IMG_6270.mp3" type="audio/mpeg">
             </audio>
+
+<audio id="napBgmAudio" loop>
+                <source src="nap_bgm.mp3" type="audio/mpeg">
+            </audio>
+            <div id="napArea" style="display: none; margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 15px; border: 2px dashed #9B5DE5;">
+                <p style="margin: 0 0 10px 0; color: #4a5568; font-weight: bold;">お疲れ様！おひるねする？</p>
+                <select id="napTimeSelect" style="padding: 8px; font-size: 1rem; border-radius: 8px; border: 1px solid #cbd5e1; outline: none;">
+                    <option value="10">10分</option>
+                    <option value="20">20分</option>
+                    <option value="30">30分</option>
+                </select>
+                <button id="startNapBtn" style="background: #9B5DE5; color: white; padding: 8px 20px; font-size: 1rem; margin-left: 10px; border-radius: 20px; cursor: pointer; border: none; font-weight: bold; box-shadow: 0 4px 6px rgba(155,93,229,0.2);">😴 おひるね開始</button>
+            </div>
             <button id="pipBtn" style="background: #a0aec0; color: white;">📺 小窓で表示</button>
             <canvas id="pipCanvas" width="400" height="200" style="display:none;"></canvas>
             <video id="pipVideo" autoplay playsinline muted style="display:none;"></video>
@@ -699,6 +712,30 @@ canvas {
             tone(1.9); tone(2.05); tone(2.2); tone(2.5); tone(2.65); tone(2.8);
             tone(3.8); tone(3.95); tone(4.1); tone(4.4); tone(4.55); tone(4.7);
         }
+
+// ⬇️ ここから追加：おひるね用の「大きめのアラーム音」
+        function playLoudBeep() {
+            if (!audioCtx) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            // アラームと同時におひるねBGMを止める
+            const napBgm = document.getElementById('napBgmAudio');
+            if (napBgm && !napBgm.paused) { napBgm.pause(); napBgm.currentTime = 0; }
+
+            // ピーッという音を「スクエア波（少しキツめの大きい音）」で長めに鳴らす
+            function loudTone(delay, duration) {
+                const osc = audioCtx.createOscillator();
+                osc.type = 'square'; 
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime + delay);
+                osc.connect(audioCtx.destination); 
+                osc.start(audioCtx.currentTime + delay);
+                osc.stop(audioCtx.currentTime + delay + duration);
+            }
+            // 起きられるように長め・多めに鳴らす
+            loudTone(0.0, 0.4); loudTone(0.6, 0.4); loudTone(1.2, 0.4); loudTone(1.8, 0.4);
+            loudTone(2.4, 0.8); loudTone(3.4, 0.8); loudTone(4.4, 0.8);
+        }
+
         // ★本番用の時間設定（すべて秒数に換算）
         const TIME_FIRST    = 1 * 60;  // 最初の集中 (1分)
         const TIME_CHOOSING = 1 * 60;  // 自動移行カウントダウン (1分)
@@ -1364,20 +1401,16 @@ if (weekPicker) {
         }
 
         // ★追加：アプリが開いた瞬間に前の状態を完全に復元する処理
-        function restoreTimerState() {
+        
+function restoreTimerState() {
             const savedData = localStorage.getItem('poyutimer_current_state');
             if (!savedData) return;
-
             const state = JSON.parse(savedData);
-            
-            // データを変数に復元
             mode = state.mode;
             timeLeft = state.timeLeft;
             totalElapsedBeforeContinue = state.totalElapsedBeforeContinue;
             totalOverTimeSeconds = state.totalOverTimeSeconds;
             totalWork25Count = state.totalWork25Count;
-
-            // ★修正：画面の見た目（テキスト・色・ボタン表示）を現在のモードに完全に合わせる
             endBreakBtn.style.display = (mode !== 'first' || state.isTimerRunning) ? 'inline-block' : 'none';
 
             if (mode === 'first') {
@@ -1403,14 +1436,21 @@ if (weekPicker) {
             } else if (mode === 'break') {
                 if (totalWork25Count > 0) {
                     statusDisplay.textContent = "休憩中！(5分)";
+                    const napArea = document.getElementById('napArea');
+                    if (napArea) napArea.style.display = 'block'; // ★5分休憩ならおひるねメニューを表示
                 } else {
                     statusDisplay.textContent = "休憩中！(1分)";
                 }
                 timerDisplay.style.color = "#57c7a3";
                 choiceArea.style.display = 'none';
+            } else if (mode === 'nap') { // ★おひるねモードの復元
+                statusDisplay.textContent = "おひるね中… 😴";
+                timerDisplay.style.color = "#9B5DE5";
+                choiceArea.style.display = 'none';
+                const napArea = document.getElementById('napArea');
+                if (napArea) napArea.style.display = 'none';
             }
 
-            // もし裏でタイマーが動いていたなら、自動で再開させて「追いつき処理」を走らせる
             if (state.isTimerRunning && state.lastTickTime) {
                 lastTickTime = state.lastTickTime;
                 startBtn.textContent = 'カウント中';
@@ -1423,12 +1463,11 @@ if (weekPicker) {
             }
         }
 
-        // ★追加：手動リセット時やタイマー完了時に保存データをクリアする用
         function clearTimerState() {
             localStorage.removeItem('poyutimer_current_state');
         }
 
-            function loadRecords() {
+        function loadRecords() {
             checkAndResetDailyRecords();
             const currentTargetDate = getTargetDateStr();
             const logs = getGlobalLogs();
@@ -1439,11 +1478,8 @@ if (weekPicker) {
                 const li = createRecordLiElement(rec, index, currentTargetDate);
                 recordList.appendChild(li);
             });
-
             const todayTotal = todaySets.reduce((sum, item) => sum + item.rawSeconds, 0);
             totalStudyTimeDisplay.textContent = formatSecondsToText(todayTotal);
-            
-            // 新しいChart.jsのグラフ関数を呼び出す（要素が存在するときだけ）
             const wp = document.getElementById('weekPicker');
             const ys = document.getElementById('yearSelect');
             if (wp && wp.value) renderWeekChart(wp.value);
@@ -1464,12 +1500,15 @@ if (weekPicker) {
                 const seconds = timeLeft % 60;
                 timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
             }
-            
-            // ⬇️ ここに追加：PiPが開いていたら小窓の映像も書き換える
             if (document.pictureInPictureElement) { updatePiP(); }
         }
 
-// ⬇️ ここから修正：裏側で進んだ時間を「追いつかせる」計算を独立させました
+        // ★おひるねBGMを強制的に止める用
+        function stopNapBgm() {
+            const napBgm = document.getElementById('napBgmAudio');
+            if (napBgm && !napBgm.paused) { napBgm.pause(); napBgm.currentTime = 0; }
+        }
+
         function tickTimerLogic() {
             if (!lastTickTime) return;
             const now = Date.now();
@@ -1486,9 +1525,7 @@ if (weekPicker) {
 
                     if (mode === 'work25') {
                         if (timeLeft === 0) {
-                            if (audioCtx && audioCtx.state === 'suspended') {
-                                audioCtx.resume();
-                            }
+                            if (audioCtx && audioCtx.state === 'suspended') { audioCtx.resume(); }
                             playBeep();
                             statusDisplay.textContent = "集中終了！オーバータイム突入";
                             timerDisplay.style.color = "#ff8e75"; 
@@ -1510,14 +1547,18 @@ if (weekPicker) {
                        else if (mode === 'choosing' && timeLeft <= 0) { clearTimerState(); goToContinue(); continue; } 
                         else if (mode === 'break' && timeLeft <= 0) { 
                             clearTimerState();
-                            if (audioCtx && audioCtx.state === 'suspended') {
-                                audioCtx.resume();
-                            }
+                            if (audioCtx && audioCtx.state === 'suspended') { audioCtx.resume(); }
                             playBeep(); goToFirstModeAutoStart(); continue; 
+                        }
+                        else if (mode === 'nap' && timeLeft <= 0) {
+                            // ★おひるね終了時の処理
+                            clearTimerState();
+                            if (audioCtx && audioCtx.state === 'suspended') { audioCtx.resume(); }
+                            playLoudBeep(); // 大きいアラームを鳴らす
+                            goToFirstModeAutoStart(); continue; 
                         }
                     }
                 }
-
                 saveTimerState();
                 updateDisplay(); 
             }
@@ -1527,12 +1568,13 @@ if (weekPicker) {
             if (!lastTickTime) {
                 lastTickTime = Date.now();
             }            
-            timerId = setInterval(tickTimerLogic, 500); // ★修正：独立させた計算関数をここで呼ぶ
+            timerId = setInterval(tickTimerLogic, 500);
             if (mode !== 'choosing') { startBtn.textContent = 'カウント中'; startBtn.disabled = true; }
             saveTimerState();
         }
 
         function stopAndBackToFirst() {
+            stopNapBgm();
             if (timerId !== null) {
                 clearInterval(timerId);
                 timerId = null;
@@ -1548,6 +1590,8 @@ if (weekPicker) {
             startBtn.classList.remove('over-break');
             startBtn.disabled = false; 
             startBtn.textContent = 'スタート';
+            const napArea = document.getElementById('napArea');
+            if (napArea) napArea.style.display = 'none';
             totalElapsedBeforeContinue = 0;
             totalOverTimeSeconds = 0; 
             totalWork25Count = 0; 
@@ -1573,12 +1617,16 @@ if (weekPicker) {
 
         function goToBreak() {
             if (mode === 'break') return;
+            const napArea = document.getElementById('napArea');
+
             if (mode === 'choosing' || mode === 'first') {
                 timeLeft = TIME_SHORT_BREAK;
                 statusDisplay.textContent = "休憩中！(1分)";
+                if (napArea) napArea.style.display = 'none';
             } else {
                 timeLeft = TIME_BREAK;
                 statusDisplay.textContent = "休憩中！(5分)";
+                if (napArea) napArea.style.display = 'block'; // ★5分休憩ならおひるねメニュー表示
             }
             
             mode = 'break';
@@ -1592,6 +1640,7 @@ if (weekPicker) {
         }
 
         function goToFirstModeAutoStart() {
+            stopNapBgm();
             mode = 'first';
             timeLeft = TIME_FIRST; 
             statusDisplay.textContent = "最初の集中！";
@@ -1602,7 +1651,8 @@ if (weekPicker) {
             startBtn.classList.remove('over-break');
             startBtn.disabled = true;
             startBtn.textContent = 'カウント中';
-            // ★バグ修正：2周目以降も累計時間を残すため、ここにあった「0リセット」の処理を削除しました
+            const napArea = document.getElementById('napArea');
+            if (napArea) napArea.style.display = 'none';
             hasContinuedInCurrentLoop = false; 
             updateDisplay();
             saveTimerState();
@@ -1619,8 +1669,9 @@ if (weekPicker) {
         });
         endBreakBtn.addEventListener('click', () => {
             unlockAudio(); 
+            stopNapBgm();
             if (timerId !== null) {
-                tickTimerLogic(); // ★最大の修正：タイマーを止める前に「裏側で進んでいた時間」を強制的に追いつかせる
+                tickTimerLogic();
                 clearInterval(timerId);
                 timerId = null;
                 lastTickTime = null; 
@@ -1628,6 +1679,8 @@ if (weekPicker) {
             setupFinishDropdowns(); 
             taskSelectArea.style.display = 'flex'; 
             endBreakBtn.style.display = 'none';
+            const napArea = document.getElementById('napArea');
+            if (napArea) napArea.style.display = 'none';
         });
         saveRecordBtn.addEventListener('click', () => { 
             checkAndResetDailyRecords();
@@ -1661,14 +1714,52 @@ if (weekPicker) {
         });
         breakBtn.addEventListener('click', () => {
             unlockAudio(); 
-            if (timerId !== null) tickTimerLogic(); // ★念のためここでも追いつき計算
+            if (timerId !== null) tickTimerLogic();
             goToBreak();
         });
         continueBtn.addEventListener('click', () => {
             unlockAudio(); 
-            if (timerId !== null) tickTimerLogic(); // ★念のためここでも追いつき計算
+            if (timerId !== null) tickTimerLogic();
             goToContinue();
         });
+
+        // ⬇️ ここから追加：おひるね開始ボタンの機能
+        const startNapBtn = document.getElementById('startNapBtn');
+        if (startNapBtn) {
+            startNapBtn.addEventListener('click', () => {
+                unlockAudio();
+                
+                // 普通のBGMが鳴っていたら強制的に止める
+                const bgmAudio = document.getElementById('bgmAudio');
+                const bgmBtn = document.getElementById('bgmBtn');
+                if (bgmAudio && !bgmAudio.paused) {
+                    bgmAudio.pause();
+                    if(typeof isBgmPlaying !== 'undefined') isBgmPlaying = false;
+                    if (bgmBtn) {
+                        bgmBtn.textContent = '🎵 BGM 再生';
+                        bgmBtn.classList.remove('playing');
+                    }
+                }
+
+                // おひるねBGMを再生
+                const napBgm = document.getElementById('napBgmAudio');
+                if (napBgm) napBgm.play().catch(e => console.log("おひるねBGMエラー:", e));
+
+                // おひるねモードに切り替え
+                mode = 'nap';
+                const napTimeSelect = document.getElementById('napTimeSelect');
+                timeLeft = parseInt(napTimeSelect.value) * 60; // 選択された分数(10/20/30)を秒に変換
+                
+                statusDisplay.textContent = "おひるね中… 😴";
+                timerDisplay.style.color = "#9B5DE5"; // 癒やされる紫色
+                document.getElementById('napArea').style.display = 'none';
+                endBreakBtn.style.display = 'inline-block';
+                
+                if (timerId === null) startTimer();
+                updateDisplay();
+                saveTimerState();
+            });
+        }
 
 // ⬇️ ここから追加：BGM再生機能のプログラム
         const bgmBtn = document.getElementById('bgmBtn');
