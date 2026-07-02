@@ -1997,7 +1997,11 @@ function renderWeekChart(weekValue) {
                     const dayIndex = elements[0].index;
                     
                     // その日の日付を計算
-                    const targetDate = new Date(monday.getTime() + (dayIndex * 24 * 60 * 60 * 1000));
+                    const [year, weekNum] = weekValue.split('-W');
+                    const baseMonday = new Date(year, 0, (weekNum - 1) * 7 + 1);
+                    baseMonday.setDate(baseMonday.getDate() - baseMonday.getDay() + 1);
+
+                    const targetDate = new Date(baseMonday.getTime() + (dayIndex * 24 * 60 * 60 * 1000));
                     const dateStr = `${targetDate.getFullYear()}-${(targetDate.getMonth() + 1).toString().padStart(2, '0')}-${targetDate.getDate().toString().padStart(2, '0')}`;
                     
                     // 選択された日の詳細を表示
@@ -2233,6 +2237,7 @@ const prevMonthPageBtn = document.getElementById('prevMonthPageBtn');
     updateDisplay();
     // 一番最後にこれを入れて、アプリ起動時に自動復元を試みる
     restoreTimerState();
+ }
 });
         
     </script>
