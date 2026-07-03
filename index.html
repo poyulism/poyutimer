@@ -713,8 +713,7 @@ canvas {
             tone(3.8); tone(3.95); tone(4.1); tone(4.4); tone(4.55); tone(4.7);
         }
 
-// ⬇️ ここから追加：おひるね用の「大きめのアラーム音」
-        function playLoudBeep() {
+function playLoudBeep() {
             if (!audioCtx) return;
             if (audioCtx.state === 'suspended') audioCtx.resume();
             
@@ -869,30 +868,8 @@ menuBtn.addEventListener('click', () => {
         function saveCategoryData(data) {
             localStorage.setItem('poyu_category_data', JSON.stringify(data));
             renderCategorySettings();
-            // 1. 西暦のセレクトボックスを生成
-const yearSelect = document.getElementById('yearSelect');
-if (yearSelect) {
-    const currentYear = new Date().getFullYear();
-    for (let i = currentYear - 2; i <= currentYear + 1; i++) {
-        let opt = document.createElement('option');
-        opt.value = i;
-        opt.textContent = i + "年";
-        if (i === currentYear) opt.selected = true; // 今年を初期選択
-        yearSelect.appendChild(opt);
-    }
-}
+                    }
 
-// 2. 週選択の初期設定
-const weekPicker = document.getElementById('weekPicker');
-if (weekPicker) {
-    // 今日の日付から週の値をセット
-    const now = new Date();
-    const year = now.getFullYear();
-    const week = Math.ceil((((now - new Date(year, 0, 1)) / 86400000) + now.getDay() + 1) / 7);
-    weekPicker.value = `${year}-W${week.toString().padStart(2, '0')}`;
-}
-            loadRecords(); 
-        }
         function parseLabelFromTitle(title) {
             const match = title.match(/^\[(.*?)\]/);
             return match ? match[1] : "その他";
@@ -1904,6 +1881,7 @@ importBtn.addEventListener('click', () => {
       // 1. グラフ管理用変数
 let myWeekChart = null;
 let myMonthChart = null;
+let currentMonthPage = 0;
 
 // 2. 週の日付範囲を計算する関数
 function getWeekRangeLabel(weekStr) {
@@ -1997,11 +1975,7 @@ function renderWeekChart(weekValue) {
                     const dayIndex = elements[0].index;
                     
                     // その日の日付を計算
-                    const [year, weekNum] = weekValue.split('-W');
-                    const baseMonday = new Date(year, 0, (weekNum - 1) * 7 + 1);
-                    baseMonday.setDate(baseMonday.getDate() - baseMonday.getDay() + 1);
-
-                    const targetDate = new Date(baseMonday.getTime() + (dayIndex * 24 * 60 * 60 * 1000));
+                    const targetDate = new Date(monday.getTime() + (dayIndex * 24 * 60 * 60 * 1000));
                     const dateStr = `${targetDate.getFullYear()}-${(targetDate.getMonth() + 1).toString().padStart(2, '0')}-${targetDate.getDate().toString().padStart(2, '0')}`;
                     
                     // 選択された日の詳細を表示
@@ -2237,7 +2211,6 @@ const prevMonthPageBtn = document.getElementById('prevMonthPageBtn');
     updateDisplay();
     // 一番最後にこれを入れて、アプリ起動時に自動復元を試みる
     restoreTimerState();
- }
 });
         
     </script>
