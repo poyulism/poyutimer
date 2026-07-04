@@ -634,6 +634,9 @@ canvas {
 <audio id="napBgmAudio" loop>
                 <source src="IMG_6403.mp3" type="audio/mpeg">
             </audio>
+
+<button id="skipToWorkBtn" style="display: none; background: #FF9F43; color: white; padding: 10px 25px; margin-top: 15px; border-radius: 20px; font-weight: bold; box-shadow: 0 4px 6px rgba(255,159,67,0.3);">🚀 休憩を切り上げて25分集中へ！</button>
+
             <div id="napArea" style="display: none; margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 15px; border: 2px dashed #9B5DE5;">
                 <p style="margin: 0 0 10px 0; color: #4a5568; font-weight: bold;">お疲れ様！おひるねする？</p>
                 <select id="napTimeSelect" style="padding: 8px; font-size: 1rem; border-radius: 8px; border: 1px solid #cbd5e1; outline: none;">
@@ -798,6 +801,8 @@ menuBtn.addEventListener('click', () => {
         const saveRecordBtn = document.getElementById('saveRecordBtn');
         
         const clearAllDataBtn = document.getElementById('clearAllDataBtn');
+
+const skipToWorkBtn = document.getElementById('skipToWorkBtn');
 
         const COLORS = [
             { hex: "#FF6B6B", name: "レッド" },
@@ -1394,11 +1399,13 @@ function restoreTimerState() {
                 statusDisplay.textContent = "最初の集中！";
                 timerDisplay.style.color = "#7bc0e3";
                 choiceArea.style.display = 'none';
+                skipToWorkBtn.style.display = 'none';
             } else if (mode === 'choosing') {
                 statusDisplay.textContent = "どっちにする？ (自動継続まであと少し)";
                 timerDisplay.style.color = "#ef4444";
                 choiceArea.style.display = 'block';
                 continueBtn.style.display = 'inline-block';
+                skipToWorkBtn.style.display = 'none';
             } else if (mode === 'work25') {
                 if (timeLeft <= 0) {
                     statusDisplay.textContent = "集中終了！オーバータイム突入";
@@ -1409,6 +1416,7 @@ function restoreTimerState() {
                     statusDisplay.textContent = "作業中！(25分集中)";
                     timerDisplay.style.color = "#7bc0e3";
                     choiceArea.style.display = 'none';
+                    skipToWorkBtn.style.display = 'none';
                 }
             } else if (mode === 'break') {
                 if (totalWork25Count > 0) {
@@ -1420,10 +1428,12 @@ function restoreTimerState() {
                 }
                 timerDisplay.style.color = "#57c7a3";
                 choiceArea.style.display = 'none';
+                skipToWorkBtn.style.display = 'inline-block';
             } else if (mode === 'nap') { // ★おひるねモードの復元
                 statusDisplay.textContent = "おひるね中… 😴";
                 timerDisplay.style.color = "#9B5DE5";
                 choiceArea.style.display = 'none';
+                skipToWorkBtn.style.display = 'inline-block';
                 const napArea = document.getElementById('napArea');
                 if (napArea) napArea.style.display = 'none';
             }
@@ -1563,6 +1573,7 @@ function restoreTimerState() {
             timerDisplay.style.color = "#7bc0e3";
             choiceArea.style.display = 'none'; 
             endBreakBtn.style.display = 'none'; 
+            skipToWorkBtn.style.display = 'none';
             taskSelectArea.style.display = 'none'; 
             startBtn.classList.remove('over-break');
             startBtn.disabled = false; 
@@ -1585,6 +1596,7 @@ function restoreTimerState() {
             timerDisplay.style.color = "#7bc0e3"; 
             choiceArea.style.display = 'none'; 
             endBreakBtn.style.display = 'inline-block';
+            skipToWorkBtn.style.display = 'none';
             hasContinuedInCurrentLoop = true; 
             startBtn.classList.remove('over-break');
             startBtn.textContent = 'カウント中';
@@ -1610,6 +1622,7 @@ function restoreTimerState() {
             timerDisplay.style.color = "#57c7a3";
             choiceArea.style.display = 'none';
             endBreakBtn.style.display = 'inline-block'; 
+            skipToWorkBtn.style.display = 'inline-block';
             startBtn.classList.remove('over-break');
             startBtn.textContent = 'カウント中'; 
             startBtn.disabled = true;
@@ -1624,6 +1637,7 @@ function restoreTimerState() {
             timerDisplay.style.color = "#7bc0e3"; 
             choiceArea.style.display = 'none'; 
             endBreakBtn.style.display = 'inline-block'; 
+            skipToWorkBtn.style.display = 'none';
             taskSelectArea.style.display = 'none'; 
             startBtn.classList.remove('over-break');
             startBtn.disabled = true;
@@ -1699,6 +1713,22 @@ function restoreTimerState() {
             if (timerId !== null) tickTimerLogic();
             goToContinue();
         });
+
+// ⬇️ ここから追加：スキップボタンの機能
+        skipToWorkBtn.addEventListener('click', () => {
+            unlockAudio();
+            stopNapBgm();
+            
+            // 現在の時間が進んでいる分を計算してから移行する
+            if (timerId !== null) tickTimerLogic();
+            
+            // 最初の1分集中をスキップし、いきなり25分集中へ
+            goToContinue();
+            
+            // 万が一タイマーが止まっている場合は再開
+            if (timerId === null) startTimer();
+        });
+        // ⬆️ ここまで追加
 
         // ⬇️ ここから追加：おひるね開始ボタンの機能
         const startNapBtn = document.getElementById('startNapBtn');
