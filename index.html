@@ -1779,31 +1779,6 @@ function restoreTimerState() {
             clearTimerState(); 
         });
 
-
-
-       
-            const totalSeconds = totalElapsedBeforeContinue + (totalWork25Count * TIME_WORK25) + totalOverTimeSeconds + currentWork25Elapsed;
-            const timeString = formatSecondsToText(totalSeconds);
-            
-            const selectedLabel = finishLabelDropdown.value;
-            let selectedTask = finishTaskDropdown.value;
-           
-            if (selectedTask === "なし") { selectedTask = ""; }
-
-            const displayTitle = selectedTask ? `[${selectedLabel}] ${selectedTask}` : `[${selectedLabel}]`;
-            
-            const memoValue = finishMemoInput.value.trim();
-            const savedLabel = finishLabelDropdown.value;
-            saveToGlobalLogs(displayTitle, timeString, totalSeconds, memoValue);
-            loadRecords();
-
-            stopAndBackToFirst(); 
-
-            finishLabelDropdown.value = savedLabel;
-            finishLabelDropdown.dispatchEvent(new Event('change'));
-            
-            finishMemoInput.value = "";
-        });
         breakBtn.addEventListener('click', () => {
             unlockAudio(); 
             if (timerId !== null) tickTimerLogic();
