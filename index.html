@@ -658,18 +658,17 @@ canvas {
         </div>
 
         <div id="taskSelectArea">
-            <div class="modal-content">
+            <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
                 <p>今回の記録を保存しよう！</p>
                 <div class="select-layout">
-                    <select id="finishLabelDropdown"></select>
-                    <select id="finishTaskDropdown"></select>
-                    <input type="text" id="finishMemoInput" placeholder="ひと言メモ">
-                    <button id="saveRecordBtn">記録を確定</button>
+                    <!-- ▼ JSで集中した回数分の入力欄が自動生成されます ▼ -->
+                    <div id="multiTaskContainer" style="display: flex; flex-direction: column; gap: 15px;">
+                    </div>
+                    
+                    <button id="saveRecordBtn" style="margin-top: 10px; width: 100%;">記録を確定</button>
                 </div>
             </div>
         </div>
-    </div>
-
 
     <script>
        // ★修正: 音を鳴らす仕組みをiPhone(iOS)対応に書き換え
@@ -750,10 +749,11 @@ function playLoudBeep() {
         let timerId = null;
         let lastTickTime = null; // ★追加：裏側にいた時間を計算するための記録用
 
-        let totalElapsedBeforeContinue = 0; 
-        let totalOverTimeSeconds = 0;        
-        let totalWork25Count = 0;            
-        let hasContinuedInCurrentLoop = false; 
+         // ★修正：集中セッションごとの時間を記録する変数に変更
+        let sessionHistory = []; // 例: [1500, 1800] (1回目25分, 2回目30分)
+        let currentSessionSeconds = 0; // 現在進行中の集中の秒数
+        let lastUsedLabel = null; // 次回のために最後に使ったラベルを記憶
+        let hasContinuedInCurrentLoop = false;
 
         const timerDisplay = document.getElementById('timer');
         const statusDisplay = document.getElementById('status');
@@ -1143,34 +1143,129 @@ const skipToWorkBtn = document.getElementById('skipToWorkBtn');
                 block.appendChild(ul);
                 nestedStructure.appendChild(block);
             }
-            setupFinishDropdowns();
+            setupFinishModal();
         }
 
-        function setupFinishDropdowns() {
-            const data = getCategoryData();
-            const currentSavedFinishLabel = finishLabelDropdown.value;
-
-            finishLabelDropdown.innerHTML = '';
-            data.labels.forEach(lbl => {
-                const opt = document.createElement('option');
-                opt.value = lbl; opt.textContent = lbl;
-                finishLabelDropdown.appendChild(opt);
-            });
-            finishLabelDropdown.onchange = () => {
-                const currentLabel = finishLabelDropdown.value;
-                finishTaskDropdown.innerHTML = '';
-                const tasks = data.mapping[currentLabel] || ["なし"];
-                tasks.forEach(tsk => {
-                    const opt = document.createElement('option');
-                    opt.value = tsk; opt.textContent = tsk;
-                    finishTaskDropdown.appendChild(opt);
-                });
-            };
-            if (currentSavedFinishLabel && data.labels.includes(currentSavedFinishLabel)) {
-                finishLabelDropdown.value = currentSavedFinishLabel;
+        // ★変更：終了時にセッション履歴から入力欄を動的に作る
+        function setupFinishModal() {
+            const container = document.getElementById('multiTaskContainer');
+            container.innerHTML = '';
+            
+            // もし開始直後にすぐ終了した場合は0秒の記録を1つ作る
+            if (sessionHistory.length === 0) {
+                sessionHistory.push(0);
             }
-            finishLabelDropdown.onchange();
+
+            const data = getCategoryData();
+
+            sessionHistory.forEach((sec, index) => {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'multi-task-row';
+                rowDiv.style.display = 'flex';
+                rowDiv.style.flexDirection = 'column';
+                rowDiv.style.gap = '8px';
+                rowDiv.style.padding = '12px';
+                rowDiv.style.background = '#f8fafc';
+                rowDiv.style.borderRadius = '10px';
+                rowDiv.style.textAlign = 'left';
+
+                const titleLabel = document.createElement('div');
+                titleLabel.style.fontWeight = 'bold';
+                titleLabel.style.color = '#4a5568';
+                titleLabel.textContent = `${index + 1}回目の集中 (${formatSecondsToText(sec)})`;
+
+                const lblSelect = document.createElement('select');
+                const tskSelect = document.createElement('select');
+                const memoInput = document.createElement('input');
+                memoInput.type = 'text';
+                memoInput.placeholder = 'ひと言メモ';
+                
+                lblSelect.className = 'row-lbl';
+                tskSelect.className = 'row-tsk';
+                memoInput.className = 'row-memo';
+
+                data.labels.forEach(lbl => {
+                    const opt = document.createElement('option');
+                    opt.value = lbl; opt.textContent = lbl;
+                    lblSelect.appendChild(opt);
+                });
+
+                lblSelect.onchange = () => {
+                    tskSelect.innerHTML = '';
+                    const tasks = data.mapping[lblSelect.value] || ["なし"];
+                    tasks.forEach(tsk => {
+                        const opt = document.createElement('option');
+                        opt.value = tsk; opt.textContent = tsk;
+                        tskSelect.appendChild(opt);
+                    });
+                };
+
+                // 前回保存したラベルがあればそれを初期選択
+                if (lastUsedLabel && data.labels.includes(lastUsedLabel)) {
+                    lblSelect.value = lastUsedLabel;
+                }
+                lblSelect.onchange();
+
+                rowDiv.appendChild(titleLabel);
+                rowDiv.appendChild(lblSelect);
+                rowDiv.appendChild(tskSelect);
+                rowDiv.appendChild(memoInput);
+                rowDiv.dataset.seconds = sec; // 保存用の秒数を埋め込む
+
+                container.appendChild(rowDiv);
+            });
         }
+
+        endBreakBtn.addEventListener('click', () => {
+            unlockAudio(); 
+            stopNapBgm();
+            if (timerId !== null) {
+                tickTimerLogic();
+                clearInterval(timerId);
+                timerId = null;
+                lastTickTime = null; 
+            }
+            
+            // ★追加：終了時、現在進行中だった集中時間を履歴にしまう
+            if (currentSessionSeconds > 0) {
+                sessionHistory.push(currentSessionSeconds);
+                currentSessionSeconds = 0;
+            }
+
+            setupFinishModal(); 
+            taskSelectArea.style.display = 'flex'; 
+            endBreakBtn.style.display = 'none';
+            const napArea = document.getElementById('napArea');
+            if (napArea) napArea.style.display = 'none';
+        });
+
+        saveRecordBtn.addEventListener('click', () => { 
+            checkAndResetDailyRecords();
+
+            const container = document.getElementById('multiTaskContainer');
+            const rows = container.querySelectorAll('.multi-task-row');
+
+            rows.forEach((row, index) => {
+                const sec = parseInt(row.dataset.seconds, 10);
+                // 0秒の記録が複数ある場合は除外（誤操作防止）
+                if (sec === 0 && rows.length > 1) return;
+
+                const selectedLabel = row.querySelector('.row-lbl').value;
+                let selectedTask = row.querySelector('.row-tsk').value;
+                if (selectedTask === "なし") selectedTask = "";
+                const memoValue = row.querySelector('.row-memo').value.trim();
+
+                const displayTitle = selectedTask ? `[${selectedLabel}] ${selectedTask}` : `[${selectedLabel}]`;
+                const timeString = formatSecondsToText(sec);
+
+                saveToGlobalLogs(displayTitle, timeString, sec, memoValue);
+
+                if (index === 0) { lastUsedLabel = selectedLabel; } // 1つ目のラベルを記憶
+            });
+
+            loadRecords();
+            stopAndBackToFirst(); 
+        });
 
         function checkAndResetDailyRecords() {
             const currentTargetDate = getTargetDateStr();
@@ -1377,14 +1472,16 @@ const skipToWorkBtn = document.getElementById('skipToWorkBtn');
         }
 
             // ★追加：アプリが落ちても状態を維持するための保存処理（1秒ごとに呼ぶ）
-        function saveTimerState() {
+        
+function saveTimerState() {
             const state = {
                 mode: mode,
                 timeLeft: timeLeft,
                 lastTickTime: lastTickTime,
-                totalElapsedBeforeContinue: totalElapsedBeforeContinue,
-                totalOverTimeSeconds: totalOverTimeSeconds,
-                totalWork25Count: totalWork25Count,
+                // ★変更：古い変数を消して、新しい履歴用変数を保存
+                sessionHistory: sessionHistory,
+                currentSessionSeconds: currentSessionSeconds,
+                
                 isTimerRunning: (timerId !== null) // タイマーが動いていたか
             };
             localStorage.setItem('poyutimer_current_state', JSON.stringify(state));
@@ -1398,9 +1495,11 @@ function restoreTimerState() {
             const state = JSON.parse(savedData);
             mode = state.mode;
             timeLeft = state.timeLeft;
-            totalElapsedBeforeContinue = state.totalElapsedBeforeContinue;
-            totalOverTimeSeconds = state.totalOverTimeSeconds;
-            totalWork25Count = state.totalWork25Count;
+            
+            // ★変更：古い変数を消して、新しい履歴用変数を読み込む
+            sessionHistory = state.sessionHistory || [];
+            currentSessionSeconds = state.currentSessionSeconds || 0;
+            
             endBreakBtn.style.display = (mode !== 'first' || state.isTimerRunning) ? 'inline-block' : 'none';
 
             if (mode === 'first') {
@@ -1427,17 +1526,19 @@ function restoreTimerState() {
                     skipToWorkBtn.style.display = 'none';
                 }
             } else if (mode === 'break') {
-                if (totalWork25Count > 0) {
+                // ★修正: 履歴に25分(1500秒)以上の記録がある、または残りが1分以上なら5分休憩と判定
+                const isLongBreak = sessionHistory.some(s => s >= 1500) || timeLeft > 60;
+                if (isLongBreak) {
                     statusDisplay.textContent = "休憩中！(5分)";
                     const napArea = document.getElementById('napArea');
-                    if (napArea) napArea.style.display = 'block'; // ★5分休憩ならおひるねメニューを表示
+                    if (napArea) napArea.style.display = 'block'; 
                 } else {
                     statusDisplay.textContent = "休憩中！(1分)";
                 }
                 timerDisplay.style.color = "#57c7a3";
                 choiceArea.style.display = 'none';
                 skipToWorkBtn.style.display = 'inline-block';
-            } else if (mode === 'nap') { // ★おひるねモードの復元
+            } else if (mode === 'nap') { 
                 statusDisplay.textContent = "おひるね中… 😴";
                 timerDisplay.style.color = "#9B5DE5";
                 choiceArea.style.display = 'none';
@@ -1513,8 +1614,10 @@ function restoreTimerState() {
                 lastTickTime += deltaSec * 1000;
                     
                 for (let i = 0; i < deltaSec; i++) {
-                    if (mode === 'first' || mode === 'choosing') { totalElapsedBeforeContinue++; }
-                    if (mode === 'work25' && timeLeft < 0) { totalOverTimeSeconds++; }
+                    // ★修正：集中系のモードなら、常に現在のセッション秒数を加算
+                    if (mode === 'first' || mode === 'choosing' || mode === 'work25') { 
+                        currentSessionSeconds++; 
+                    }
              
                     timeLeft--;
 
@@ -1524,7 +1627,7 @@ function restoreTimerState() {
                             playBeep();
                             statusDisplay.textContent = "集中終了！オーバータイム突入";
                             timerDisplay.style.color = "#ff8e75"; 
-                            totalWork25Count++;
+                            // totalWork25Count は削除
                             choiceArea.style.display = 'block';
                             continueBtn.style.display = 'none';
                             startBtn.disabled = true;
@@ -1568,7 +1671,7 @@ function restoreTimerState() {
             saveTimerState();
         }
 
-        function stopAndBackToFirst() {
+       function stopAndBackToFirst() {
             stopNapBgm();
             if (timerId !== null) {
                 clearInterval(timerId);
@@ -1588,9 +1691,11 @@ function restoreTimerState() {
             startBtn.textContent = 'スタート';
             const napArea = document.getElementById('napArea');
             if (napArea) napArea.style.display = 'none';
-            totalElapsedBeforeContinue = 0;
-            totalOverTimeSeconds = 0; 
-            totalWork25Count = 0; 
+            
+            // ★変更：古い変数を消して、新しい履歴用変数を初期化
+            sessionHistory = [];
+            currentSessionSeconds = 0;
+            
             hasContinuedInCurrentLoop = false; 
             updateDisplay();
             clearTimerState();
@@ -1614,6 +1719,13 @@ function restoreTimerState() {
 
         function goToBreak() {
             if (mode === 'break') return;
+
+// ★追加：休憩に入る直前に、ここまでの集中時間を履歴に保存してリセット
+            if (currentSessionSeconds > 0) {
+                sessionHistory.push(currentSessionSeconds);
+                currentSessionSeconds = 0;
+            }
+
             const napArea = document.getElementById('napArea');
 
             if (mode === 'choosing' || mode === 'first') {
@@ -1666,29 +1778,10 @@ function restoreTimerState() {
             stopAndBackToFirst();
             clearTimerState(); 
         });
-        endBreakBtn.addEventListener('click', () => {
-            unlockAudio(); 
-            stopNapBgm();
-            if (timerId !== null) {
-                tickTimerLogic();
-                clearInterval(timerId);
-                timerId = null;
-                lastTickTime = null; 
-            }
-            setupFinishDropdowns(); 
-            taskSelectArea.style.display = 'flex'; 
-            endBreakBtn.style.display = 'none';
-            const napArea = document.getElementById('napArea');
-            if (napArea) napArea.style.display = 'none';
-        });
-        saveRecordBtn.addEventListener('click', () => { 
-            checkAndResetDailyRecords();
 
-            let currentWork25Elapsed = 0;
-            if (mode === 'work25' && timeLeft > 0) {
-                currentWork25Elapsed = TIME_WORK25 - timeLeft;
-            }
 
+
+       
             const totalSeconds = totalElapsedBeforeContinue + (totalWork25Count * TIME_WORK25) + totalOverTimeSeconds + currentWork25Elapsed;
             const timeString = formatSecondsToText(totalSeconds);
             
