@@ -1911,6 +1911,7 @@ function restoreTimerState() {
         }
 
         function startTimer() {
+            resetBtn.style.display = 'inline-block';
             if (!lastTickTime) {
                 lastTickTime = Date.now();
             }            
@@ -1920,6 +1921,7 @@ function restoreTimerState() {
         }
 
        function stopAndBackToFirst() {
+           resetBtn.style.display = 'none';
             stopNapBgm();
             if (timerId !== null) {
                 clearInterval(timerId);
