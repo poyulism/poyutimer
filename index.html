@@ -2507,6 +2507,21 @@ function renderMonthChart(yearValue) {
                 li.style.padding = '8px 0';
                 li.style.borderBottom = '1px dashed #e2e8f0';
 
+const pinBtn = document.createElement('button');
+pinBtn.textContent = todo.pinned ? '📌' : '📍';
+pinBtn.style.padding = '4px 6px';
+pinBtn.style.fontSize = '0.9rem';
+pinBtn.style.border = 'none';
+pinBtn.style.background = 'transparent';
+pinBtn.style.cursor = 'pointer';
+pinBtn.style.margin = '0';
+
+pinBtn.onclick = () => {
+    todo.pinned = !todo.pinned;
+    localStorage.setItem('poyu_todo_list', JSON.stringify(todos));
+    renderTodoList();
+};
+                
                 const nameSpan = document.createElement('span');
                 nameSpan.textContent = todo.name;
                 nameSpan.style.flex = '1';
@@ -2559,6 +2574,7 @@ function renderMonthChart(yearValue) {
                 };
 
                 const delBtn = document.createElement('span');
+                
                 delBtn.textContent = '×';
                 delBtn.style.color = '#ef4444';
                 delBtn.style.cursor = 'pointer';
@@ -2570,9 +2586,11 @@ function renderMonthChart(yearValue) {
                     renderTodoList();
                 };
 
+                btnGroup.appendChild(pinBtn);
                 btnGroup.appendChild(plusBtn);
                 btnGroup.appendChild(delBtn);
 
+                li.appendChild(pinBtn);
                 li.appendChild(nameSpan);
                 li.appendChild(countSpan);
                 li.appendChild(btnGroup);
@@ -2588,7 +2606,7 @@ function renderMonthChart(yearValue) {
 
             if (name && target > 0) {
                 let todos = JSON.parse(localStorage.getItem('poyu_todo_list') || '[]');
-                todos.push({ name: name, current: 0, target: target });
+                todos.push({ name: name, current: 0, target: target, pinned: false });
                 localStorage.setItem('poyu_todo_list', JSON.stringify(todos));
                 nameInput.value = '';
                 targetInput.value = '';
