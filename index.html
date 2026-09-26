@@ -657,6 +657,18 @@ canvas {
             <button id="continueBtn" class="choice-btn">継続する！</button>
         </div>
 
+<div id="todoArea" style="margin-top: 20px; width: 100%; max-width: 320px; background: #ffffff; padding: 15px; border-radius: 15px; border: 2px solid #e1e8ed; text-align: left; box-shadow: 0 4px 10px rgba(123, 192, 227, 0.1);">
+            <h3 style="margin: 0 0 10px 0; font-size: 1.1rem; color: #4a5568;">✅ 今日のToDo</h3>
+            <ul id="todoList" style="list-style: none; padding: 0; margin: 0; max-height: 150px; overflow-y: auto;">
+                <!-- ToDoアイテムがここに入る -->
+            </ul>
+            <div style="display: flex; gap: 5px; margin-top: 10px;">
+                <input type="text" id="todoInput" placeholder="タスク名" style="flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; font-size: 0.9rem;">
+                <input type="number" id="todoTarget" placeholder="回数" style="width: 50px; padding: 8px; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; font-size: 0.9rem;" min="1">
+                <button id="addTodoBtn" style="background: #57c7a3; color: white; border: none; border-radius: 8px; padding: 8px 12px; font-weight: bold; cursor: pointer; margin: 0; box-shadow: none; font-size: 0.9rem;">追加</button>
+            </div>
+        </div>
+
         <div id="taskSelectArea">
             <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
                 <p>今回の記録を保存しよう！</p>
@@ -1274,6 +1286,9 @@ const skipToWorkBtn = document.getElementById('skipToWorkBtn');
                 localStorage.setItem('poyu_timer_date', currentTargetDate);
                 recordList.innerHTML = '';
                 totalStudyTimeDisplay.textContent = "0分00秒";
+// ★追加：日付が変わったらToDoリストもリセットする
+                localStorage.removeItem('poyu_todo_list');
+                if (typeof renderTodoList === 'function') renderTodoList();
             }
         }
 
@@ -1774,16 +1789,23 @@ function restoreTimerState() {
             endBreakBtn.style.display = 'inline-block'; 
             if (startBtn.classList.contains('over-break')) { goToBreak(); } else { if (timerId === null) { startTimer(); } }
         });
+
+
         resetBtn.addEventListener('click', () => {
             stopAndBackToFirst();
             clearTimerState(); 
         });
+
+
+
 
         breakBtn.addEventListener('click', () => {
             unlockAudio(); 
             if (timerId !== null) tickTimerLogic();
             goToBreak();
         });
+
+
         continueBtn.addEventListener('click', () => {
             unlockAudio(); 
             if (timerId !== null) tickTimerLogic();
@@ -2235,6 +2257,113 @@ function renderMonthChart(yearValue) {
     }
 }
 
+// ⬇️ ここから追加：ToDoリストの機能
+        function renderTodoList() {
+            const todoList = document.getElementById('todoList');
+            if (!todoList) return;
+            todoList.innerHTML = '';
+            let todos = JSON.parse(localStorage.getItem('poyu_todo_list') || '[]');
+            
+            todos.forEach((todo, index) => {
+                const li = document.createElement('li');
+                li.style.display = 'flex';
+                li.style.alignItems = 'center';
+                li.style.justifyContent = 'space-between';
+                li.style.padding = '8px 0';
+                li.style.borderBottom = '1px dashed #e2e8f0';
+
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = todo.name;
+                nameSpan.style.flex = '1';
+                nameSpan.style.fontSize = '0.95rem';
+                nameSpan.style.color = '#4a5568';
+                nameSpan.style.fontWeight = 'bold';
+                nameSpan.style.whiteSpace = 'nowrap';
+                nameSpan.style.overflow = 'hidden';
+                nameSpan.style.textOverflow = 'ellipsis';
+
+                const countSpan = document.createElement('span');
+                countSpan.textContent = `${todo.current}/${todo.target}`;
+                countSpan.style.fontWeight = 'bold';
+                countSpan.style.color = todo.current >= todo.target ? '#57c7a3' : '#7bc0e3';
+                countSpan.style.margin = '0 10px';
+                countSpan.style.fontSize = '0.9rem';
+
+                const btnGroup = document.createElement('div');
+                btnGroup.style.display = 'flex';
+                btnGroup.style.alignItems = 'center';
+                btnGroup.style.gap = '8px';
+
+                const plusBtn = document.createElement('button');
+                plusBtn.textContent = '＋1';
+                plusBtn.style.padding = '4px 8px';
+                plusBtn.style.fontSize = '0.8rem';
+                plusBtn.style.borderRadius = '6px';
+                plusBtn.style.border = 'none';
+                plusBtn.style.background = '#7bc0e3';
+                plusBtn.style.color = 'white';
+                plusBtn.style.cursor = 'pointer';
+                plusBtn.style.margin = '0';
+                plusBtn.style.boxShadow = 'none';
+
+                // 目標達成時の見た目変更
+                if (todo.current >= todo.target) {
+                    plusBtn.disabled = true;
+                    plusBtn.style.background = '#cbd5e1';
+                    nameSpan.style.textDecoration = 'line-through';
+                    nameSpan.style.color = '#a0aec0';
+                    countSpan.style.color = '#a0aec0';
+                }
+
+                plusBtn.onclick = () => {
+                    if (todo.current < todo.target) {
+                        todo.current++;
+                        localStorage.setItem('poyu_todo_list', JSON.stringify(todos));
+                        renderTodoList();
+                    }
+                };
+
+                const delBtn = document.createElement('span');
+                delBtn.textContent = '×';
+                delBtn.style.color = '#ef4444';
+                delBtn.style.cursor = 'pointer';
+                delBtn.style.fontWeight = 'bold';
+                delBtn.style.fontSize = '1.2rem';
+                delBtn.onclick = () => {
+                    todos.splice(index, 1);
+                    localStorage.setItem('poyu_todo_list', JSON.stringify(todos));
+                    renderTodoList();
+                };
+
+                btnGroup.appendChild(plusBtn);
+                btnGroup.appendChild(delBtn);
+
+                li.appendChild(nameSpan);
+                li.appendChild(countSpan);
+                li.appendChild(btnGroup);
+                todoList.appendChild(li);
+            });
+        }
+
+        document.getElementById('addTodoBtn').addEventListener('click', () => {
+            const nameInput = document.getElementById('todoInput');
+            const targetInput = document.getElementById('todoTarget');
+            const name = nameInput.value.trim();
+            const target = parseInt(targetInput.value, 10);
+
+            if (name && target > 0) {
+                let todos = JSON.parse(localStorage.getItem('poyu_todo_list') || '[]');
+                todos.push({ name: name, current: 0, target: target });
+                localStorage.setItem('poyu_todo_list', JSON.stringify(todos));
+                nameInput.value = '';
+                targetInput.value = '';
+                renderTodoList();
+            } else {
+                alert("タスク名と、1以上の回数を入力してください！");
+            }
+        });
+        // ⬆️ ここまで追加
+
 // 5 & 6. ページ読み込み時の初期化とイベントリスナー（安全に実行するために統合）
 window.addEventListener('DOMContentLoaded', () => {
     const now = new Date();
@@ -2314,6 +2443,7 @@ const prevMonthPageBtn = document.getElementById('prevMonthPageBtn');
     statusDisplay.textContent = "最初の集中！";
     renderCategorySettings();
     loadRecords(); // この中で renderWeekChart と renderMonthChart も自動で走ります
+renderTodoList(); // ★追加：ToDoリストを読み込む
     updateDisplay();
     // 一番最後にこれを入れて、アプリ起動時に自動復元を試みる
     restoreTimerState();
