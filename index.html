@@ -2513,7 +2513,9 @@ function renderMonthChart(yearValue) {
                 li.style.borderBottom = '1px dashed #e2e8f0';
 
 const pinBtn = document.createElement('button');
-pinBtn.textContent = todo.pinned ? '📌' : '📍';
+pinBtn.textContent = '📌';
+pinBtn.style.filter = todo.pinned ? 'none' : 'grayscale(1)';
+pinBtn.style.opacity = todo.pinned ? '1' : '0.45';
 pinBtn.style.padding = '4px 6px';
 pinBtn.style.fontSize = '0.9rem';
 pinBtn.style.border = 'none';
