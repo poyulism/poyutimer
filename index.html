@@ -2502,17 +2502,22 @@ function renderMonthChart(yearValue) {
             const todoList = document.getElementById('todoList');
             if (!todoList) return;
             todoList.innerHTML = '';
-            let todos = JSON.parse(localStorage.getItem('poyu_todo_list') || '[]');
-            
-            todos.forEach((todo, index) => {
-                const li = document.createElement('li');
-                li.style.display = 'flex';
-                li.style.alignItems = 'center';
-                li.style.justifyContent = 'space-between';
-                li.style.padding = '8px 0';
-                li.style.borderBottom = '1px dashed #e2e8f0';
+          let todos = JSON.parse(localStorage.getItem('poyu_todo_list') || '[]');
+
+todos.forEach((todo, index) => {
+    if (typeof todo.pinned !== 'boolean') {
+        todo.pinned = false;
+    }
+
+    const li = document.createElement('li');
+    li.style.display = 'flex';
+    li.style.alignItems = 'center';
+    li.style.justifyContent = 'space-between';
+    li.style.padding = '8px 0';
+    li.style.borderBottom = '1px dashed #e2e8f0';
 
 const pinBtn = document.createElement('button');
+pinBtn.type = 'button';
 pinBtn.textContent = '📌';
 pinBtn.style.filter = todo.pinned ? 'none' : 'grayscale(1)';
 pinBtn.style.opacity = todo.pinned ? '1' : '0.45';
@@ -2593,7 +2598,6 @@ pinBtn.onclick = () => {
                     renderTodoList();
                 };
 
-                btnGroup.appendChild(pinBtn);
                 btnGroup.appendChild(plusBtn);
                 btnGroup.appendChild(delBtn);
 
