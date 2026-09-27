@@ -2503,6 +2503,10 @@ function renderMonthChart(yearValue) {
             if (!todoList) return;
             todoList.innerHTML = '';
           let todos = JSON.parse(localStorage.getItem('poyu_todo_list') || '[]');
+            todos.sort((a, b) => {
+    if (a.pinned === b.pinned) return 0;
+    return a.pinned ? -1 : 1;
+});
 
 todos.forEach((todo, index) => {
     if (typeof todo.pinned !== 'boolean') {
