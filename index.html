@@ -1519,9 +1519,14 @@ const skipToWorkBtn = document.getElementById('skipToWorkBtn');
                 localStorage.setItem('poyu_timer_date', currentTargetDate);
                 recordList.innerHTML = '';
                 totalStudyTimeDisplay.textContent = "0分00秒";
-// ★追加：日付が変わったらToDoリストもリセットする
-                localStorage.removeItem('poyu_todo_list');
-                if (typeof renderTodoList === 'function') renderTodoList();
+
+                // 日付が変わったら、ピン留めしていないToDoだけ削除
+const todos = JSON.parse(localStorage.getItem('poyu_todo_list') || '[]');
+const pinnedTodos = todos.filter(todo => todo.pinned === true);
+
+localStorage.setItem('poyu_todo_list', JSON.stringify(pinnedTodos));
+
+if (typeof renderTodoList === 'function') renderTodoList();
             }
         }
 
