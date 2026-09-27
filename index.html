@@ -2620,6 +2620,11 @@ pinBtn.onclick = () => {
                     todos.splice(index, 1);
                     localStorage.setItem('poyu_todo_list', JSON.stringify(todos));
                     renderTodoList();
+                    // 削除後、すぐにタスク名入力欄へ戻す
+    setTimeout(() => {
+        const nameInput = document.getElementById('todoInput');
+        if (nameInput) nameInput.focus();
+    }, 0);
                 };
 
                 btnGroup.appendChild(plusBtn);
@@ -2646,6 +2651,10 @@ pinBtn.onclick = () => {
                 nameInput.value = '';
                 targetInput.value = '';
                 renderTodoList();
+                // 追加後、すぐにタスク名入力欄へ戻す
+setTimeout(() => {
+    nameInput.focus();
+}, 0);
             } else {
                 alert("タスク名と、1以上の回数を入力してください！");
             }
