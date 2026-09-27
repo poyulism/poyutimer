@@ -2534,6 +2534,26 @@ pinBtn.style.margin = '0';
 
 pinBtn.onclick = () => {
     todo.pinned = !todo.pinned;
+
+    if (todo.pinned) {
+        // 新しくピン留めしたタスクを、ピン留め済みの末尾へ移動
+        const pinnedTodos = todos.filter(
+            item => item.pinned === true && item !== todo
+        );
+
+        const unpinnedTodos = todos.filter(
+            item => item.pinned !== true && item !== todo
+        );
+
+        todos = [...pinnedTodos, todo, ...unpinnedTodos];
+    } else {
+        // ピン留めを解除したら、ピン留めなしのグループへ移動
+        todos.sort((a, b) => {
+            if (a.pinned === b.pinned) return 0;
+            return a.pinned ? -1 : 1;
+        });
+    }
+
     localStorage.setItem('poyu_todo_list', JSON.stringify(todos));
     renderTodoList();
 };
