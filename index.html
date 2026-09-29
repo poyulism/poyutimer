@@ -1522,7 +1522,12 @@ const skipToWorkBtn = document.getElementById('skipToWorkBtn');
 
                 // 日付が変わったら、ピン留めしていないToDoだけ削除
 const todos = JSON.parse(localStorage.getItem('poyu_todo_list') || '[]');
-const pinnedTodos = todos.filter(todo => todo.pinned === true);
+const pinnedTodos = todos
+    .filter(todo => todo.pinned === true)
+    .map(todo => ({
+        ...todo,
+        current: 0
+    }));
 
 localStorage.setItem('poyu_todo_list', JSON.stringify(pinnedTodos));
 
